@@ -3,14 +3,19 @@
 type Counts = {
   categories: Record<string, number>
   difficulties: Record<string, number>
+  developerCount: number
 }
+
+export type DeveloperFilter = null | 'only' | 'exclude'
 
 type Props = {
   counts: Counts
   categories: string[]
   difficulties: string[]
+  developerFilter: DeveloperFilter
   onCategoriesChange: (c: string[]) => void
   onDifficultiesChange: (d: string[]) => void
+  onDeveloperFilterChange: (f: DeveloperFilter) => void
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -27,7 +32,7 @@ const DIFFICULTY_CONFIG: Record<string, { label: string; dot: string }> = {
   hard:   { label: 'Difficile', dot: 'bg-red-400'    },
 }
 
-export function QuizFilters({ counts, categories, difficulties, onCategoriesChange, onDifficultiesChange }: Props) {
+export function QuizFilters({ counts, categories, difficulties, developerFilter, onCategoriesChange, onDifficultiesChange, onDeveloperFilterChange }: Props) {
   const totalQuestions = Object.values(counts.categories).reduce((a, b) => a + b, 0)
 
   function toggleCategory(key: string) {
@@ -94,6 +99,35 @@ export function QuizFilters({ counts, categories, difficulties, onCategoriesChan
           )}
         </div>
       </div>
+
+      {/* Type */}
+      {counts.developerCount > 0 && (
+        <div>
+          <p className="text-xs uppercase tracking-widest text-zinc-600 mb-2 px-3">Type</p>
+          <div className="space-y-0.5">
+            <FilterItem
+              label="Toutes"
+              count={totalQuestions}
+              active={developerFilter === null}
+              onClick={() => onDeveloperFilterChange(null)}
+            />
+            <FilterItem
+              label="Dev"
+              count={counts.developerCount}
+              active={developerFilter === 'only'}
+              dot="bg-indigo-400"
+              onClick={() => onDeveloperFilterChange(developerFilter === 'only' ? null : 'only')}
+            />
+            <FilterItem
+              label="Hors dev"
+              count={totalQuestions - counts.developerCount}
+              active={developerFilter === 'exclude'}
+              dot="bg-zinc-400"
+              onClick={() => onDeveloperFilterChange(developerFilter === 'exclude' ? null : 'exclude')}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

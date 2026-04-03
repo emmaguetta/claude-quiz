@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import type { Question } from '@/lib/supabase'
 
@@ -8,10 +9,13 @@ type Props = {
   selectedIdx: number
   onNext: () => void
   sessionCount: number
+  hideNext?: boolean
+  nextLabel?: string
 }
 
-export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount }: Props) {
+export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount, hideNext, nextLabel }: Props) {
   const isCorrect = selectedIdx === question.correct_idx
+  const [showLearnMore, setShowLearnMore] = useState(false)
 
   return (
     <div className="space-y-4">
@@ -36,23 +40,42 @@ export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount }: 
           )}
         </div>
         <p className="text-base text-zinc-300 leading-relaxed mt-2">{question.explanation}</p>
-        {question.source_url && (
-          <a
-            href={question.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block mt-2 text-sm text-zinc-500 hover:text-zinc-300 underline underline-offset-2"
-          >
-            Voir dans la doc →
-          </a>
+
+        <div className="flex items-center gap-3 mt-3">
+          {question.learn_more && (
+            <button
+              onClick={() => setShowLearnMore(!showLearnMore)}
+              className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              {showLearnMore ? 'Masquer ↑' : 'En savoir plus ↓'}
+            </button>
+          )}
+          {question.source_url && (
+            <a
+              href={question.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-zinc-500 hover:text-zinc-300 underline underline-offset-2"
+            >
+              Voir dans la doc →
+            </a>
+          )}
+        </div>
+
+        {showLearnMore && question.learn_more && (
+          <div className="mt-3 pt-3 border-t border-zinc-700/50">
+            <p className="text-sm text-zinc-300 leading-relaxed">{question.learn_more}</p>
+          </div>
         )}
       </div>
 
       <div className="flex items-center justify-between">
         <span className="text-sm text-zinc-500">{sessionCount} question{sessionCount > 1 ? 's' : ''} cette session</span>
-        <Button onClick={onNext} className="bg-zinc-100 text-zinc-900 hover:bg-white">
-          Question suivante →
-        </Button>
+        {!hideNext && (
+          <Button onClick={onNext} className="bg-zinc-100 text-zinc-900 hover:bg-white">
+            {nextLabel ?? 'Question suivante →'}
+          </Button>
+        )}
       </div>
     </div>
   )

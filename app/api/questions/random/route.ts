@@ -7,11 +7,14 @@ export async function GET(request: Request) {
   const exclude = searchParams.get('exclude')?.split(',').filter(Boolean) ?? []
   const categories = searchParams.get('categories')?.split(',').filter(Boolean) ?? []
   const difficulties = searchParams.get('difficulties')?.split(',').filter(Boolean) ?? []
+  const developer = searchParams.get('developer') // 'only' | 'exclude' | null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = supabase.from('questions').select('*').eq('active', true)
   if (categories.length > 0) query = query.in('category', categories)
   if (difficulties.length > 0) query = query.in('difficulty', difficulties)
+  if (developer === 'only') query = query.eq('developer', true)
+  else if (developer === 'exclude') query = query.eq('developer', false)
 
   const { data, error } = await query as { data: Question[] | null; error: { message: string } | null }
 

@@ -34,9 +34,11 @@ export type Question = {
   options: string[]
   correct_idx: number
   explanation: string
+  learn_more: string | null
   category: 'commands' | 'shortcuts' | 'concepts' | 'mcp' | 'workflow'
   difficulty: 'easy' | 'medium' | 'hard'
   source_url: string | null
+  developer: boolean
   active: boolean
   created_at: string
 }

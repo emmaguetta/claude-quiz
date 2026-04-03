@@ -9,8 +9,10 @@ const QuestionSchema = z.object({
       options: z.array(z.string()).length(4),
       correct_idx: z.number().int().min(0).max(3),
       explanation: z.string(),
+      learn_more: z.string(),
       category: z.enum(['commands', 'shortcuts', 'concepts', 'mcp', 'workflow']),
       difficulty: z.enum(['easy', 'medium', 'hard']),
+      developer: z.boolean(),
       source_url: z.string().nullable(),
     })
   ),
@@ -84,6 +86,17 @@ async function fetchDocContent(url: string): Promise<string> {
   }
 }
 
+// Détecte si un texte est en anglais (heuristique par mots courants)
+function isLikelyEnglish(text: string): boolean {
+  const markers = [
+    /\bwhat\b/i, /\bwhich\b/i, /\bhow\b/i, /\bthe\b/i, /\bis\b/i,
+    /\bare\b/i, /\bthis\b/i, /\bthat\b/i, /\bwith\b/i, /\byour\b/i,
+    /\byou\b/i, /\bfor\b/i, /\bcan\b/i, /\bwill\b/i, /\bshould\b/i,
+    /\babout\b/i, /\bthere\b/i, /\bused\b/i, /\ballow\b/i, /\bfollowing\b/i,
+  ]
+  return markers.filter(re => re.test(text)).length >= 3
+}
+
 // Normalise une question pour comparaison (minuscules, sans ponctuation)
 function normalize(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9àâéèêëîïôùûüç\s]/g, '').replace(/\s+/g, ' ').trim()
@@ -113,25 +126,31 @@ export async function generateQuestionsFromDocs(
   const { experimental_output } = await generateText({
     model: openai('gpt-4o-mini'),
     experimental_output: Output.object({ schema: QuestionSchema }),
-    system: `Tu es un expert Claude Code qui crée des quiz pour aider les développeurs à maîtriser l'outil.
+    system: `Tu es un expert Claude Code qui crée des quiz pour aider les développeurs francophones à maîtriser l'outil.
 Génère exactement ${count} questions quiz à choix multiples basées sur la documentation fournie.
 
-Règles :
-- TOUTES les questions, options et explications doivent être rédigées en FRANÇAIS
-- Les termes techniques (noms de commandes, flags, raccourcis clavier comme Ctrl+C, Escape) restent en anglais
+LANGUE — OBLIGATION ABSOLUE :
+- TOUTES les questions, options et explications DOIVENT être rédigées en FRANÇAIS. JAMAIS en anglais.
+- Seuls les termes techniques restent en anglais : noms de commandes (claude, /compact), flags (--no-tools), raccourcis clavier (Ctrl+C, Escape), noms de fichiers (CLAUDE.md, .mcp.json), noms de protocoles (MCP, OIDC).
+- Si la documentation source est en anglais, tu TRADUIS le contenu en français. Tu ne recopies JAMAIS une phrase anglaise telle quelle.
+
+Règles de contenu :
 - Chaque question a exactement 4 options (A, B, C, D)
 - correct_idx est l'index 0-3 de la bonne réponse
 - explanation : 1-2 phrases claires en français qui expliquent pourquoi la réponse est correcte
+- learn_more : un paragraphe pédagogique (4-6 phrases) en français qui explique en profondeur le concept abordé par la question. Il doit définir clairement ce que c'est, à quoi ça sert, et comment l'utiliser concrètement. Si c'est une commande ou un raccourci, donne un exemple d'utilisation. Le ton doit être accessible, comme un mini-cours.
 - Varie les catégories et difficultés
 - Focus sur l'utilisation pratique : commandes, raccourcis, flags, concepts clés
 - Les mauvaises réponses doivent être plausibles (pas absurdes)
+- developer : mets true si la question porte sur un usage développeur de Claude Code (refactoring, écriture de tests, CI/CD, pipelines GitHub Actions, debug, revue de code, gestion de dépendances, déploiement). Mets false pour les questions sur l'interface, raccourcis, concepts généraux, configuration basique.
 - Ne génère JAMAIS une question trop proche d'une question existante${existingContext}`,
-    prompt: `Documentation Claude Code :\n\n${combinedDocs}\n\nGénère ${count} questions quiz originales.`,
+    prompt: `Documentation Claude Code :\n\n${combinedDocs}\n\nGénère ${count} questions quiz originales EN FRANÇAIS.`,
   })
 
-  // Filtre côté client les questions trop similaires aux existantes ou entre elles
+  // Filtre les questions en anglais, trop similaires aux existantes ou entre elles
   const kept: GeneratedQuestion[] = []
   for (const q of experimental_output.questions) {
+    if (isLikelyEnglish(q.question)) continue
     const tooCloseToExisting = existingQuestions.some(eq => isTooSimilar(q.question, eq))
     const tooCloseToKept = kept.some(k => isTooSimilar(q.question, k.question))
     if (!tooCloseToExisting && !tooCloseToKept) {

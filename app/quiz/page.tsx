@@ -6,17 +6,33 @@ import { Progress } from '@/components/ui/progress'
 import { QuizCard } from '@/components/QuizCard'
 import { AnswerFeedback } from '@/components/AnswerFeedback'
 import { QuizFilters } from '@/components/QuizFilters'
+import type { DeveloperFilter } from '@/components/QuizFilters'
 import { HiScores } from '@/components/HiScores'
 import type { HiScore } from '@/components/HiScores'
 import type { Question } from '@/lib/supabase'
 
 const SESSION_KEY = 'claude-quiz-session'
 const HI_SCORES_KEY = 'claude-quiz-hiscores'
+const FILTERS_KEY = 'claude-quiz-filters'
 const TARGET = 15
-const MAX_HI_SCORES = 5
+const MAX_HI_SCORES = 10
 
 type SessionData = { seen: string[]; correct: number; total: number }
-type Counts = { categories: Record<string, number>; difficulties: Record<string, number> }
+type FiltersData = { categories: string[]; difficulties: string[]; developer: DeveloperFilter }
+type Counts = { categories: Record<string, number>; difficulties: Record<string, number>; developerCount: number }
+
+function loadFilters(): FiltersData {
+  if (typeof window === 'undefined') return { categories: [], difficulties: [], developer: null }
+  try {
+    return JSON.parse(localStorage.getItem(FILTERS_KEY) ?? 'null') ?? { categories: [], difficulties: [], developer: null }
+  } catch {
+    return { categories: [], difficulties: [], developer: null }
+  }
+}
+
+function saveFilters(f: FiltersData) {
+  localStorage.setItem(FILTERS_KEY, JSON.stringify(f))
+}
 
 function loadSession(): SessionData {
   if (typeof window === 'undefined') return { seen: [], correct: 0, total: 0 }
@@ -55,8 +71,11 @@ export default function QuizPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
   const [session, setSession] = useState<SessionData>({ seen: [], correct: 0, total: 0 })
+  const [prevQuestion, setPrevQuestion] = useState<{ question: Question; selectedIdx: number } | null>(null)
+  const [viewingPrev, setViewingPrev] = useState(false)
   const [categories, setCategories] = useState<string[]>([])
   const [difficulties, setDifficulties] = useState<string[]>([])
+  const [developerFilter, setDeveloperFilter] = useState<DeveloperFilter>(null)
   const [counts, setCounts] = useState<Counts | null>(null)
   const [hiScores, setHiScores] = useState<HiScore[]>([])
 
@@ -64,6 +83,7 @@ export default function QuizPage() {
     seen: string[]
     categories: string[]
     difficulties: string[]
+    developer?: DeveloperFilter
   }) => {
     setLoading(true)
     setError(null)
@@ -73,6 +93,7 @@ export default function QuizPage() {
     if (opts.categories.length > 0) params.set('categories', opts.categories.join(','))
     if (opts.difficulties.length > 0) params.set('difficulties', opts.difficulties.join(','))
     if (opts.seen.length > 0) params.set('exclude', opts.seen.join(','))
+    if (opts.developer) params.set('developer', opts.developer)
 
     try {
       const res = await fetch(`/api/questions/random?${params}`)
@@ -99,9 +120,22 @@ export default function QuizPage() {
   // Initial mount
   useEffect(() => {
     const saved = loadSession()
-    setSession(saved)
+    const savedFilters = loadFilters()
     setHiScores(loadHiScores())
-    fetchQuestion({ seen: saved.seen, categories: [], difficulties: [] })
+    setCategories(savedFilters.categories)
+    setDifficulties(savedFilters.difficulties)
+    setDeveloperFilter(savedFilters.developer)
+
+    // If previous session was completed, start fresh
+    if (saved.total >= TARGET) {
+      const fresh = { seen: [], correct: 0, total: 0 }
+      setSession(fresh)
+      saveSession(fresh)
+      fetchQuestion({ seen: [], ...savedFilters })
+    } else {
+      setSession(saved)
+      fetchQuestion({ seen: saved.seen, ...savedFilters })
+    }
 
     fetch('/api/questions/counts')
       .then(r => r.json())
@@ -110,7 +144,7 @@ export default function QuizPage() {
   }, [fetchQuestion])
 
   function handleSelect(idx: number) {
-    if (selectedIdx !== null || !question) return
+    if (selectedIdx !== null || !question || session.total >= TARGET) return
     setSelectedIdx(idx)
     const isCorrect = idx === question.correct_idx
     const next: SessionData = {
@@ -121,8 +155,8 @@ export default function QuizPage() {
     setSession(next)
     saveSession(next)
 
-    // Save hi-score at the end of every TARGET-question block
-    if (next.total % TARGET === 0) {
+    // Save hi-score when session reaches exactly TARGET
+    if (next.total === TARGET) {
       const entry: HiScore = {
         correct: next.correct,
         total: next.total,
@@ -135,34 +169,55 @@ export default function QuizPage() {
   }
 
   function handleNext() {
-    fetchQuestion({ seen: session.seen, categories, difficulties })
+    if (session.total >= TARGET) return
+    if (question && selectedIdx !== null) {
+      setPrevQuestion({ question, selectedIdx })
+    }
+    setViewingPrev(false)
+    fetchQuestion({ seen: session.seen, categories, difficulties, developer: developerFilter })
   }
 
   function handleCategoriesChange(cats: string[]) {
     setCategories(cats)
+    saveFilters({ categories: cats, difficulties, developer: developerFilter })
     const fresh = { seen: [], correct: 0, total: 0 }
     setSession(fresh)
     saveSession(fresh)
-    fetchQuestion({ seen: [], categories: cats, difficulties })
+    fetchQuestion({ seen: [], categories: cats, difficulties, developer: developerFilter })
   }
 
   function handleDifficultiesChange(diffs: string[]) {
     setDifficulties(diffs)
+    saveFilters({ categories, difficulties: diffs, developer: developerFilter })
     const fresh = { seen: [], correct: 0, total: 0 }
     setSession(fresh)
     saveSession(fresh)
-    fetchQuestion({ seen: [], categories, difficulties: diffs })
+    fetchQuestion({ seen: [], categories, difficulties: diffs, developer: developerFilter })
+  }
+
+  function handleDeveloperFilterChange(f: DeveloperFilter) {
+    setDeveloperFilter(f)
+    saveFilters({ categories, difficulties, developer: f })
+    const fresh = { seen: [], correct: 0, total: 0 }
+    setSession(fresh)
+    saveSession(fresh)
+    fetchQuestion({ seen: [], categories, difficulties, developer: f })
   }
 
   function resetSession() {
     const fresh = { seen: [], correct: 0, total: 0 }
     setSession(fresh)
     saveSession(fresh)
-    fetchQuestion({ seen: [], categories, difficulties })
+    fetchQuestion({ seen: [], categories, difficulties, developer: developerFilter })
   }
 
   const progress = Math.min((session.total / TARGET) * 100, 100)
-  const showSummary = session.total > 0 && session.total % TARGET === 0 && selectedIdx !== null
+  const sessionComplete = session.total === TARGET
+  const showSummary = sessionComplete && selectedIdx !== null
+
+  // Which question to display
+  const displayQuestion = viewingPrev ? prevQuestion?.question ?? null : question
+  const displaySelectedIdx = viewingPrev ? prevQuestion?.selectedIdx ?? null : selectedIdx
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -192,13 +247,13 @@ export default function QuizPage() {
 
           {/* Quiz content */}
           <div className="flex-1 min-w-0 space-y-4">
-            {loading && (
+            {loading && !viewingPrev && (
               <div className="flex items-center justify-center py-20">
                 <div className="text-zinc-500 text-base animate-pulse">Chargement…</div>
               </div>
             )}
 
-            {error && (
+            {error && !viewingPrev && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-300">
                 {error}
                 <button
@@ -210,8 +265,33 @@ export default function QuizPage() {
               </div>
             )}
 
-            {!loading && !error && question && (
+            {viewingPrev && prevQuestion && (
               <>
+                <div className="flex items-center gap-2 text-sm text-zinc-500">
+                  <span>Question précédente (lecture seule)</span>
+                </div>
+                <QuizCard question={prevQuestion.question} selectedIdx={prevQuestion.selectedIdx} onSelect={() => {}} />
+                <AnswerFeedback
+                  question={prevQuestion.question}
+                  selectedIdx={prevQuestion.selectedIdx}
+                  onNext={() => setViewingPrev(false)}
+                  sessionCount={session.total}
+                  hideNext={false}
+                  nextLabel="Retour à la question actuelle →"
+                />
+              </>
+            )}
+
+            {!viewingPrev && !loading && !error && question && (
+              <>
+                {prevQuestion && selectedIdx === null && (
+                  <button
+                    onClick={() => setViewingPrev(true)}
+                    className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    ← Question précédente
+                  </button>
+                )}
                 <QuizCard question={question} selectedIdx={selectedIdx} onSelect={handleSelect} />
                 {selectedIdx !== null && (
                   <AnswerFeedback
@@ -219,12 +299,13 @@ export default function QuizPage() {
                     selectedIdx={selectedIdx}
                     onNext={handleNext}
                     sessionCount={session.total}
+                    hideNext={sessionComplete}
                   />
                 )}
               </>
             )}
 
-            {showSummary && (
+            {showSummary && !viewingPrev && (
               <div className="mt-6 rounded-lg border border-zinc-700 bg-zinc-900 p-6 text-center space-y-3">
                 <div className="text-3xl font-bold">{session.correct}/{session.total}</div>
                 <p className="text-zinc-400 text-base">
@@ -251,8 +332,10 @@ export default function QuizPage() {
                 counts={counts}
                 categories={categories}
                 difficulties={difficulties}
+                developerFilter={developerFilter}
                 onCategoriesChange={handleCategoriesChange}
                 onDifficultiesChange={handleDifficultiesChange}
+                onDeveloperFilterChange={handleDeveloperFilterChange}
               />
             </div>
           )}

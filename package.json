@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "translate": "tsx scripts/translate-to-french.ts",
+    "backfill-learn-more": "tsx scripts/backfill-learn-more.ts",
+    "dedup": "tsx scripts/dedup-questions.ts",
+    "verify": "tsx scripts/verify-and-fix.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.50",
