@@ -11,12 +11,15 @@
     "translate": "tsx scripts/translate-to-french.ts",
     "backfill-learn-more": "tsx scripts/backfill-learn-more.ts",
     "dedup": "tsx scripts/dedup-questions.ts",
-    "verify": "tsx scripts/verify-and-fix.ts"
+    "verify": "tsx scripts/verify-and-fix.ts",
+    "review": "tsx scripts/review-all.ts",
+    "enrich-learn-more": "tsx scripts/enrich-learn-more.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.50",
     "@ai-sdk/react": "^3.0.145",
     "@base-ui/react": "^1.3.0",
+    "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.101.1",
     "@vercel/config": "^0.1.0",
     "ai": "^6.0.143",

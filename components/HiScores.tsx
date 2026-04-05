@@ -1,5 +1,7 @@
 'use client'
 
+import { useLocale } from '@/components/LocaleProvider'
+
 export type HiScore = {
   correct: number
   total: number
@@ -22,7 +24,6 @@ const DIFF_COLOR: Record<string, string> = {
   hard: 'text-red-400',
 }
 
-const RANK_LABEL = ['#1', '#2', '#3', '#4', '#5']
 const RANK_COLOR = [
   'text-yellow-400',
   'text-zinc-300',
@@ -32,22 +33,23 @@ const RANK_COLOR = [
 ]
 
 export function HiScores({ scores }: { scores: HiScore[] }) {
+  const { t } = useLocale()
   return (
     <div className="mt-10 font-mono">
       {/* Retro divider header */}
       <div className="flex items-center gap-3 mb-5">
         <div className="flex-1 border-t border-dashed border-zinc-800" />
         <span className="text-xs tracking-[0.25em] uppercase text-emerald-500/70 animate-pulse select-none">
-          ▶ MEILLEURS SCORES ◀
+          {t.scores.header}
         </span>
         <div className="flex-1 border-t border-dashed border-zinc-800" />
       </div>
 
       {scores.length === 0 ? (
         <div className="text-center py-6 space-y-2">
-          <div className="text-zinc-700 text-sm tracking-[0.2em] uppercase">--- AUCUN SCORE ---</div>
+          <div className="text-zinc-700 text-sm tracking-[0.2em] uppercase">{t.scores.empty}</div>
           <div className="text-zinc-700 text-xs tracking-widest animate-pulse">
-            INSÉREZ UNE PIÈCE
+            {t.scores.insertCoin}
           </div>
         </div>
       ) : (
@@ -66,8 +68,8 @@ export function HiScores({ scores }: { scores: HiScore[] }) {
                 }`}
               >
                 {/* Rank */}
-                <span className={`w-8 font-bold shrink-0 ${RANK_COLOR[i]}`}>
-                  {RANK_LABEL[i]}
+                <span className={`w-8 font-bold shrink-0 ${RANK_COLOR[i] ?? 'text-zinc-600'}`}>
+                  #{i + 1}
                 </span>
 
                 {/* Score */}
@@ -89,7 +91,7 @@ export function HiScores({ scores }: { scores: HiScore[] }) {
                 {/* Tags */}
                 <div className="flex flex-wrap gap-1 flex-1 min-w-0">
                   {noFilters ? (
-                    <span className="text-xs text-zinc-700 uppercase tracking-wide">TOUT</span>
+                    <span className="text-xs text-zinc-700 uppercase tracking-wide">{t.scores.all}</span>
                   ) : (
                     <>
                       {s.categories.map(c => (
@@ -107,7 +109,7 @@ export function HiScores({ scores }: { scores: HiScore[] }) {
                             DIFF_COLOR[d] ?? 'text-zinc-400'
                           }`}
                         >
-                          {d}
+                          {t.scores.difficulties[d] ?? d}
                         </span>
                       ))}
                     </>

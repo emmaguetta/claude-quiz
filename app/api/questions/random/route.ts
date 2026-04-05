@@ -8,9 +8,10 @@ export async function GET(request: Request) {
   const categories = searchParams.get('categories')?.split(',').filter(Boolean) ?? []
   const difficulties = searchParams.get('difficulties')?.split(',').filter(Boolean) ?? []
   const developer = searchParams.get('developer') // 'only' | 'exclude' | null
+  const lang = searchParams.get('lang') || 'fr'
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = supabase.from('questions').select('*').eq('active', true)
+  let query: any = supabase.from('questions').select('*').eq('active', true).eq('lang', lang)
   if (categories.length > 0) query = query.in('category', categories)
   if (difficulties.length > 0) query = query.in('difficulty', difficulties)
   if (developer === 'only') query = query.eq('developer', true)

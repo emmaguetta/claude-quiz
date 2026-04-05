@@ -9,11 +9,15 @@ import { QuizFilters } from '@/components/QuizFilters'
 import type { DeveloperFilter } from '@/components/QuizFilters'
 import { HiScores } from '@/components/HiScores'
 import type { HiScore } from '@/components/HiScores'
+import { useAuth } from '@/components/AuthProvider'
+import { useLocale } from '@/components/LocaleProvider'
+import { LocaleToggle } from '@/components/LocaleToggle'
 import type { Question } from '@/lib/supabase'
 
 const SESSION_KEY = 'claude-quiz-session'
 const HI_SCORES_KEY = 'claude-quiz-hiscores'
 const FILTERS_KEY = 'claude-quiz-filters'
+const PROFILE_BANNER_KEY = 'claude-quiz-profile-filters-applied'
 const TARGET = 15
 const MAX_HI_SCORES = 10
 
@@ -66,6 +70,8 @@ function addHiScore(entry: HiScore): HiScore[] {
 }
 
 export default function QuizPage() {
+  const { user } = useAuth()
+  const { locale, t } = useLocale()
   const [question, setQuestion] = useState<Question | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -78,6 +84,8 @@ export default function QuizPage() {
   const [developerFilter, setDeveloperFilter] = useState<DeveloperFilter>(null)
   const [counts, setCounts] = useState<Counts | null>(null)
   const [hiScores, setHiScores] = useState<HiScore[]>([])
+  const [showProfileBanner, setShowProfileBanner] = useState(false)
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
 
   const fetchQuestion = useCallback(async (opts: {
     seen: string[]
@@ -94,10 +102,11 @@ export default function QuizPage() {
     if (opts.difficulties.length > 0) params.set('difficulties', opts.difficulties.join(','))
     if (opts.seen.length > 0) params.set('exclude', opts.seen.join(','))
     if (opts.developer) params.set('developer', opts.developer)
+    params.set('lang', locale)
 
     try {
       const res = await fetch(`/api/questions/random?${params}`)
-      if (!res.ok) throw new Error('Impossible de charger une question')
+      if (!res.ok) throw new Error(t.quiz.loadError)
       const { _resetSeen, ...questionData } = await res.json()
 
       if (_resetSeen) {
@@ -111,11 +120,11 @@ export default function QuizPage() {
 
       setQuestion(questionData as Question)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur inconnue')
+      setError(e instanceof Error ? e.message : t.quiz.unknownError)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t, locale])
 
   // Initial mount
   useEffect(() => {
@@ -125,6 +134,12 @@ export default function QuizPage() {
     setCategories(savedFilters.categories)
     setDifficulties(savedFilters.difficulties)
     setDeveloperFilter(savedFilters.developer)
+
+    // Show profile banner if filters were just applied from onboarding
+    if (localStorage.getItem(PROFILE_BANNER_KEY) === 'true') {
+      setShowProfileBanner(true)
+      localStorage.removeItem(PROFILE_BANNER_KEY)
+    }
 
     // If previous session was completed, start fresh
     if (saved.total >= TARGET) {
@@ -137,11 +152,11 @@ export default function QuizPage() {
       fetchQuestion({ seen: saved.seen, ...savedFilters })
     }
 
-    fetch('/api/questions/counts')
+    fetch(`/api/questions/counts?lang=${locale}`)
       .then(r => r.json())
       .then(setCounts)
       .catch(() => {})
-  }, [fetchQuestion])
+  }, [fetchQuestion, locale])
 
   function handleSelect(idx: number) {
     if (selectedIdx !== null || !question || session.total >= TARGET) return
@@ -220,36 +235,89 @@ export default function QuizPage() {
   const displaySelectedIdx = viewingPrev ? prevQuestion?.selectedIdx ?? null : selectedIdx
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="max-w-4xl w-full mx-auto px-6 py-10">
+    <main className="min-h-screen text-zinc-100">
+      <div className="max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-4">
           <Link href="/" className="text-base text-zinc-500 hover:text-zinc-300 transition-colors">
-            ← Accueil
+            {t.quiz.home}
           </Link>
-          <div className="text-base text-zinc-400">
-            {session.correct}/{session.total} correctes
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button
+              onClick={resetSession}
+              title={t.quiz.newSession}
+              className="text-zinc-600 hover:text-zinc-300 transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+              </svg>
+            </button>
+            <span className="text-sm sm:text-base text-zinc-400">
+              {session.correct}/{session.total} {t.quiz.correct}
+            </span>
+            <LocaleToggle />
           </div>
         </div>
+
+        {/* Profile banner */}
+        {showProfileBanner && (
+          <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+            <p className="text-sm text-amber-300/80">
+              {t.quiz.profileBanner}
+            </p>
+            <button
+              onClick={() => setShowProfileBanner(false)}
+              className="text-sm text-zinc-500 hover:text-zinc-300 ml-4 shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Progress */}
         <div className="mb-8 space-y-1">
           <div className="flex justify-between text-sm text-zinc-500">
-            <span>Session</span>
+            <span>{t.quiz.session}</span>
             <span>{session.total}/{TARGET}</span>
           </div>
           <Progress value={progress} className="h-1.5 bg-zinc-800" />
         </div>
 
+        {/* Mobile filters toggle */}
+        {counts && (
+          <div className="lg:hidden mb-4">
+            <button
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+            >
+              {showMobileFilters ? t.quiz.filtersToggleHide : t.quiz.filtersToggleShow}
+            </button>
+            {showMobileFilters && (
+              <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+                <QuizFilters
+                  counts={counts}
+                  categories={categories}
+                  difficulties={difficulties}
+                  developerFilter={developerFilter}
+                  onCategoriesChange={handleCategoriesChange}
+                  onDifficultiesChange={handleDifficultiesChange}
+                  onDeveloperFilterChange={handleDeveloperFilterChange}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Quiz + Filters */}
-        <div className="flex gap-8 items-start">
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
 
           {/* Quiz content */}
-          <div className="flex-1 min-w-0 space-y-4">
+          <div className="flex-1 min-w-0 w-full space-y-4">
             {loading && !viewingPrev && (
               <div className="flex items-center justify-center py-20">
-                <div className="text-zinc-500 text-base animate-pulse">Chargement…</div>
+                <div className="text-zinc-500 text-base animate-pulse">{t.quiz.loading}</div>
               </div>
             )}
 
@@ -260,7 +328,7 @@ export default function QuizPage() {
                   onClick={() => fetchQuestion({ seen: session.seen, categories, difficulties })}
                   className="ml-3 underline hover:no-underline"
                 >
-                  Réessayer
+                  {t.quiz.retry}
                 </button>
               </div>
             )}
@@ -268,7 +336,7 @@ export default function QuizPage() {
             {viewingPrev && prevQuestion && (
               <>
                 <div className="flex items-center gap-2 text-sm text-zinc-500">
-                  <span>Question précédente (lecture seule)</span>
+                  <span>{t.quiz.prevReadonly}</span>
                 </div>
                 <QuizCard question={prevQuestion.question} selectedIdx={prevQuestion.selectedIdx} onSelect={() => {}} />
                 <AnswerFeedback
@@ -277,7 +345,7 @@ export default function QuizPage() {
                   onNext={() => setViewingPrev(false)}
                   sessionCount={session.total}
                   hideNext={false}
-                  nextLabel="Retour à la question actuelle →"
+                  nextLabel={t.quiz.backToCurrent}
                 />
               </>
             )}
@@ -289,7 +357,7 @@ export default function QuizPage() {
                     onClick={() => setViewingPrev(true)}
                     className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
                   >
-                    ← Question précédente
+                    {t.quiz.prevQuestion}
                   </button>
                 )}
                 <QuizCard question={question} selectedIdx={selectedIdx} onSelect={handleSelect} />
@@ -310,24 +378,24 @@ export default function QuizPage() {
                 <div className="text-3xl font-bold">{session.correct}/{session.total}</div>
                 <p className="text-zinc-400 text-base">
                   {session.correct >= session.total * 0.8
-                    ? 'Excellent ! Tu maîtrises bien Claude Code.'
+                    ? t.quiz.summaryExcellent
                     : session.correct >= session.total * 0.5
-                    ? "Pas mal ! Continue à t'entraîner."
-                    : 'Continue à apprendre — tu progresseras vite !'}
+                    ? t.quiz.summaryGood
+                    : t.quiz.summaryKeepGoing}
                 </p>
                 <button
                   onClick={resetSession}
                   className="text-sm text-zinc-400 hover:text-zinc-100 underline underline-offset-2"
                 >
-                  Nouvelle session
+                  {t.quiz.newSession}
                 </button>
               </div>
             )}
           </div>
 
-          {/* Filter sidebar */}
+          {/* Filter sidebar — hidden on mobile, shown on lg+ */}
           {counts && (
-            <div className="w-44 shrink-0 sticky top-8">
+            <div className="hidden lg:block w-44 shrink-0 sticky top-8">
               <QuizFilters
                 counts={counts}
                 categories={categories}

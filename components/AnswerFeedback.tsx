@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useLocale } from '@/components/LocaleProvider'
 import type { Question } from '@/lib/supabase'
 
 type Props = {
@@ -14,8 +15,11 @@ type Props = {
 }
 
 export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount, hideNext, nextLabel }: Props) {
+  const { t } = useLocale()
   const isCorrect = selectedIdx === question.correct_idx
   const [showLearnMore, setShowLearnMore] = useState(false)
+  const [reported, setReported] = useState(false)
+  const [reporting, setReporting] = useState(false)
 
   return (
     <div className="space-y-4">
@@ -28,11 +32,11 @@ export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount, hi
       >
         <div className="flex items-center gap-2 mb-2">
           <span className={`text-xl font-medium ${isCorrect ? 'text-emerald-400' : 'text-red-400'}`}>
-            {isCorrect ? '✓ Correct !' : '✗ Incorrect'}
+            {isCorrect ? t.feedback.correct : t.feedback.incorrect}
           </span>
           {!isCorrect && (
             <span className="text-base text-zinc-400">
-              Bonne réponse :{' '}
+              {t.feedback.correctAnswer}{' '}
               <span className="text-emerald-400 font-medium">
                 {String.fromCharCode(65 + question.correct_idx)}. {question.options[question.correct_idx]}
               </span>
@@ -47,7 +51,7 @@ export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount, hi
               onClick={() => setShowLearnMore(!showLearnMore)}
               className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
             >
-              {showLearnMore ? 'Masquer ↑' : 'En savoir plus ↓'}
+              {showLearnMore ? t.feedback.learnMoreHide : t.feedback.learnMoreShow}
             </button>
           )}
           {question.source_url && (
@@ -57,9 +61,33 @@ export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount, hi
               rel="noopener noreferrer"
               className="text-sm text-zinc-500 hover:text-zinc-300 underline underline-offset-2"
             >
-              Voir dans la doc →
+              {t.feedback.viewDocs}
             </a>
           )}
+          <button
+            onClick={async () => {
+              if (reported || reporting) return
+              setReporting(true)
+              try {
+                await fetch('/api/questions/report', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ question_id: question.id, reason: 'wrong_answer' }),
+                })
+                setReported(true)
+              } finally {
+                setReporting(false)
+              }
+            }}
+            disabled={reported || reporting}
+            className={`text-sm transition-colors ml-auto ${
+              reported
+                ? 'text-amber-400 cursor-default'
+                : 'text-zinc-600 hover:text-amber-400'
+            }`}
+          >
+            {reported ? t.feedback.reported : reporting ? '…' : t.feedback.report}
+          </button>
         </div>
 
         {showLearnMore && question.learn_more && (
@@ -69,14 +97,13 @@ export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount, hi
         )}
       </div>
 
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-zinc-500">{sessionCount} question{sessionCount > 1 ? 's' : ''} cette session</span>
-        {!hideNext && (
+      {!hideNext && (
+        <div className="flex justify-end">
           <Button onClick={onNext} className="bg-zinc-100 text-zinc-900 hover:bg-white">
-            {nextLabel ?? 'Question suivante →'}
+            {nextLabel ?? t.quiz.nextQuestion}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

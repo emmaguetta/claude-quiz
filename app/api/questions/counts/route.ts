@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const lang = searchParams.get('lang') || 'fr'
+
   const { data, error } = await supabase
     .from('questions')
     .select('category, difficulty, developer')
     .eq('active', true)
+    .eq('lang', lang)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

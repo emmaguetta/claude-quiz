@@ -1,5 +1,7 @@
 'use client'
 
+import { useLocale } from '@/components/LocaleProvider'
+
 type Counts = {
   categories: Record<string, number>
   difficulties: Record<string, number>
@@ -18,21 +20,14 @@ type Props = {
   onDeveloperFilterChange: (f: DeveloperFilter) => void
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  commands: 'Commandes',
-  shortcuts: 'Raccourcis',
-  concepts: 'Concepts',
-  mcp: 'MCP',
-  workflow: 'Workflow',
-}
-
-const DIFFICULTY_CONFIG: Record<string, { label: string; dot: string }> = {
-  easy:   { label: 'Facile',   dot: 'bg-emerald-400' },
-  medium: { label: 'Moyen',    dot: 'bg-amber-400'   },
-  hard:   { label: 'Difficile', dot: 'bg-red-400'    },
+const DIFFICULTY_DOT: Record<string, string> = {
+  easy:   'bg-emerald-400',
+  medium: 'bg-amber-400',
+  hard:   'bg-red-400',
 }
 
 export function QuizFilters({ counts, categories, difficulties, developerFilter, onCategoriesChange, onDifficultiesChange, onDeveloperFilterChange }: Props) {
+  const { t } = useLocale()
   const totalQuestions = Object.values(counts.categories).reduce((a, b) => a + b, 0)
 
   function toggleCategory(key: string) {
@@ -51,17 +46,19 @@ export function QuizFilters({ counts, categories, difficulties, developerFilter,
 
   return (
     <div className="space-y-6">
+      <p className="text-xs uppercase tracking-widest text-zinc-500 px-3">{t.filters.title}</p>
+
       {/* Catégorie */}
       <div>
-        <p className="text-xs uppercase tracking-widest text-zinc-600 mb-2 px-3">Catégorie</p>
+        <p className="text-xs uppercase tracking-widest text-zinc-600 mb-2 px-3">{t.filters.category}</p>
         <div className="space-y-0.5">
           <FilterItem
-            label="Toutes"
+            label={t.filters.all}
             count={totalQuestions}
             active={categories.length === 0}
             onClick={() => onCategoriesChange([])}
           />
-          {Object.entries(CATEGORY_LABELS).map(([key, label]) =>
+          {Object.entries(t.filters.categories).map(([key, label]) =>
             counts.categories[key] ? (
               <FilterItem
                 key={key}
@@ -77,22 +74,22 @@ export function QuizFilters({ counts, categories, difficulties, developerFilter,
 
       {/* Difficulté */}
       <div>
-        <p className="text-xs uppercase tracking-widest text-zinc-600 mb-2 px-3">Difficulté</p>
+        <p className="text-xs uppercase tracking-widest text-zinc-600 mb-2 px-3">{t.filters.difficulty}</p>
         <div className="space-y-0.5">
           <FilterItem
-            label="Toutes"
+            label={t.filters.all}
             count={Object.values(counts.difficulties).reduce((a, b) => a + b, 0)}
             active={difficulties.length === 0}
             onClick={() => onDifficultiesChange([])}
           />
-          {Object.entries(DIFFICULTY_CONFIG).map(([key, { label, dot }]) =>
+          {Object.entries(t.filters.difficulties).map(([key, label]) =>
             counts.difficulties[key] ? (
               <FilterItem
                 key={key}
                 label={label}
                 count={counts.difficulties[key]}
                 active={difficulties.includes(key)}
-                dot={dot}
+                dot={DIFFICULTY_DOT[key]}
                 onClick={() => toggleDifficulty(key)}
               />
             ) : null
@@ -103,23 +100,23 @@ export function QuizFilters({ counts, categories, difficulties, developerFilter,
       {/* Type */}
       {counts.developerCount > 0 && (
         <div>
-          <p className="text-xs uppercase tracking-widest text-zinc-600 mb-2 px-3">Type</p>
+          <p className="text-xs uppercase tracking-widest text-zinc-600 mb-2 px-3">{t.filters.type}</p>
           <div className="space-y-0.5">
             <FilterItem
-              label="Toutes"
+              label={t.filters.all}
               count={totalQuestions}
               active={developerFilter === null}
               onClick={() => onDeveloperFilterChange(null)}
             />
             <FilterItem
-              label="Dev"
+              label={t.filters.dev}
               count={counts.developerCount}
               active={developerFilter === 'only'}
               dot="bg-indigo-400"
               onClick={() => onDeveloperFilterChange(developerFilter === 'only' ? null : 'only')}
             />
             <FilterItem
-              label="Hors dev"
+              label={t.filters.nonDev}
               count={totalQuestions - counts.developerCount}
               active={developerFilter === 'exclude'}
               dot="bg-zinc-400"

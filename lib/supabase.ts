@@ -20,13 +20,7 @@ function makeLazyClient() {
 
 export const supabase = makeLazyClient()
 
-// Server-side admin client (for writes — only use in API routes)
-export function createAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
-  return createClient(url, key, { auth: { persistSession: false } })
-}
+export { createAdminClient } from './supabase/admin'
 
 export type Question = {
   id: string
@@ -35,10 +29,20 @@ export type Question = {
   correct_idx: number
   explanation: string
   learn_more: string | null
-  category: 'commands' | 'shortcuts' | 'concepts' | 'mcp' | 'workflow'
+  category: 'commands' | 'shortcuts' | 'concepts' | 'mcp' | 'workflow' | 'skills'
   difficulty: 'easy' | 'medium' | 'hard'
   source_url: string | null
   developer: boolean
+  lang: 'fr' | 'en'
   active: boolean
+  created_at: string
+}
+
+export type Profile = {
+  id: string
+  activities: string[]
+  usage_level: 'never' | 'sometimes' | 'often' | 'daily'
+  goals: string[]
+  onboarded: boolean
   created_at: string
 }
