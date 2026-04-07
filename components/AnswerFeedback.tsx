@@ -92,7 +92,7 @@ export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount, hi
 
         {showLearnMore && question.learn_more && (
           <div className="mt-3 pt-3 border-t border-zinc-700/50">
-            <p className="text-sm text-zinc-300 leading-relaxed">{question.learn_more}</p>
+            <p className="text-base text-zinc-300 leading-relaxed mt-2 whitespace-pre-wrap">{question.learn_more}</p>
           </div>
         )}
       </div>
