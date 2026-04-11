@@ -46,3 +46,24 @@ export type Profile = {
   onboarded: boolean
   created_at: string
 }
+
+export type QuizAttempt = {
+  id: string
+  user_id: string
+  question_id: string
+  selected_idx: number
+  is_correct: boolean
+  session_id: string | null
+  answered_at: string
+}
+
+export type UserQuizStats = {
+  user_id: string
+  total_attempts: number
+  correct_attempts: number
+  accuracy_pct: number | null
+  unique_questions: number
+  total_sessions: number
+  first_attempt_at: string
+  last_attempt_at: string
+}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Progress } from '@/components/ui/progress'
 import { QuizCard } from '@/components/QuizCard'
@@ -12,6 +12,7 @@ import type { HiScore } from '@/components/HiScores'
 import { useAuth } from '@/components/AuthProvider'
 import { useLocale } from '@/components/LocaleProvider'
 import { LocaleToggle } from '@/components/LocaleToggle'
+import { createClient } from '@/lib/supabase/client'
 import type { Question } from '@/lib/supabase'
 
 const SESSION_KEY = 'claude-quiz-session'
@@ -69,9 +70,19 @@ function addHiScore(entry: HiScore): HiScore[] {
   return top
 }
 
+function newSessionId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  // Fallback: should never hit on modern browsers
+  return `sess-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
 export default function QuizPage() {
   const { user } = useAuth()
   const { locale, t } = useLocale()
+  const supabase = useMemo(() => createClient(), [])
+  const sessionIdRef = useRef<string>(newSessionId())
   const [question, setQuestion] = useState<Question | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -146,6 +157,7 @@ export default function QuizPage() {
       const fresh = { seen: [], correct: 0, total: 0 }
       setSession(fresh)
       saveSession(fresh)
+      sessionIdRef.current = newSessionId()
       fetchQuestion({ seen: [], ...savedFilters })
     } else {
       setSession(saved)
@@ -169,6 +181,29 @@ export default function QuizPage() {
     }
     setSession(next)
     saveSession(next)
+
+    // Persist attempt to DB for logged-in users (RLS enforces user_id = auth.uid())
+    if (user) {
+      const attemptQuestionId = question.id
+      const attemptSelectedIdx = idx
+      const attemptIsCorrect = isCorrect
+      const attemptSessionId = sessionIdRef.current
+      void supabase
+        .from('quiz_attempts')
+        .insert({
+          user_id: user.id,
+          question_id: attemptQuestionId,
+          selected_idx: attemptSelectedIdx,
+          is_correct: attemptIsCorrect,
+          session_id: attemptSessionId,
+        })
+        .then(({ error }) => {
+          if (error) {
+            // Non-fatal — local session keeps working even if tracking fails
+            console.warn('[quiz_attempts] insert failed', error.message)
+          }
+        })
+    }
 
     // Save hi-score when session reaches exactly TARGET
     if (next.total === TARGET) {
@@ -198,6 +233,7 @@ export default function QuizPage() {
     const fresh = { seen: [], correct: 0, total: 0 }
     setSession(fresh)
     saveSession(fresh)
+    sessionIdRef.current = newSessionId()
     fetchQuestion({ seen: [], categories: cats, difficulties, developer: developerFilter })
   }
 
@@ -207,6 +243,7 @@ export default function QuizPage() {
     const fresh = { seen: [], correct: 0, total: 0 }
     setSession(fresh)
     saveSession(fresh)
+    sessionIdRef.current = newSessionId()
     fetchQuestion({ seen: [], categories, difficulties: diffs, developer: developerFilter })
   }
 
@@ -216,6 +253,7 @@ export default function QuizPage() {
     const fresh = { seen: [], correct: 0, total: 0 }
     setSession(fresh)
     saveSession(fresh)
+    sessionIdRef.current = newSessionId()
     fetchQuestion({ seen: [], categories, difficulties, developer: f })
   }
 
@@ -223,6 +261,7 @@ export default function QuizPage() {
     const fresh = { seen: [], correct: 0, total: 0 }
     setSession(fresh)
     saveSession(fresh)
+    sessionIdRef.current = newSessionId()
     fetchQuestion({ seen: [], categories, difficulties, developer: developerFilter })
   }
 
