@@ -30,7 +30,7 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get('claude-quiz-locale')?.value;
-  const initialLocale: Locale = localeCookie === 'en' ? 'en' : 'fr';
+  const initialLocale: Locale = localeCookie === 'fr' ? 'fr' : 'en';
 
   return (
     <html

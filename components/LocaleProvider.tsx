@@ -13,9 +13,9 @@ type LocaleContextType = {
 }
 
 const LocaleContext = createContext<LocaleContextType>({
-  locale: 'fr',
+  locale: 'en',
   setLocale: () => {},
-  t: getTranslations('fr'),
+  t: getTranslations('en'),
 })
 
 export function useLocale() {
@@ -29,7 +29,7 @@ export function LocaleProvider({
   children: React.ReactNode
   initialLocale?: Locale
 }) {
-  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? 'fr')
+  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? 'en')
 
   function setLocale(l: Locale) {
     setLocaleState(l)
