@@ -32,6 +32,11 @@ const translations = {
       summaryExcellent: 'Excellent ! Tu maîtrises bien Claude Code.',
       summaryGood: "Pas mal ! Continue à t'entraîner.",
       summaryKeepGoing: 'Continue à apprendre — tu progresseras vite !',
+      summaryTitle: 'Récap de la session',
+      summaryYourAnswer: 'Ta réponse',
+      summaryCorrectAnswer: 'Bonne réponse',
+      summaryWhy: 'Pourquoi ?',
+      viewRecap: 'Voir le bilan →',
     },
     // Login
     login: {
@@ -222,6 +227,11 @@ const translations = {
       summaryExcellent: 'Excellent! You really know Claude Code.',
       summaryGood: 'Not bad! Keep practicing.',
       summaryKeepGoing: 'Keep learning — you\'ll improve fast!',
+      summaryTitle: 'Session recap',
+      summaryYourAnswer: 'Your answer',
+      summaryCorrectAnswer: 'Correct answer',
+      summaryWhy: 'Why?',
+      viewRecap: 'View recap →',
     },
     login: {
       titleSignUp: 'Create an account',
