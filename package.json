@@ -17,8 +17,12 @@
     "rewrite-learn-more": "tsx scripts/rewrite-learn-more.ts",
     "translate-learn-more": "tsx scripts/translate-learn-more.ts",
     "create-missing-en": "tsx scripts/create-missing-en.ts",
+    "improve-distractors": "tsx scripts/improve-distractors.ts",
     "remotion": "remotion studio remotion/index.ts",
-    "remotion:render": "remotion render remotion/index.ts ClaudeQuizDemo out/claude-quiz-demo.mp4"
+    "remotion:render": "remotion render remotion/index.ts ClaudeQuizDemo out/claude-quiz-demo-fr.mp4 --browser-executable='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --gl=angle",
+    "remotion:render:en": "remotion render remotion/index.ts ClaudeQuizDemoEN out/claude-quiz-demo-en.mp4 --browser-executable='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --gl=angle",
+    "remotion:render:stories": "remotion render remotion/index.ts ClaudeQuizDemoStories out/claude-quiz-stories-fr.mp4 --browser-executable='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --gl=angle",
+    "remotion:render:stories:en": "remotion render remotion/index.ts ClaudeQuizDemoStoriesEN out/claude-quiz-stories-en.mp4 --browser-executable='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --gl=angle"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.50",

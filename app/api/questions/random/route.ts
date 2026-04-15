@@ -27,5 +27,15 @@ export async function GET(request: Request) {
   if (_resetSeen) pool = data
 
   const random = pool[Math.floor(Math.random() * pool.length)]
-  return NextResponse.json({ ...random, _resetSeen })
+
+  // Shuffle options so the correct answer isn't always at the same position
+  const indices = [0, 1, 2, 3]
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]]
+  }
+  const shuffledOptions = indices.map(i => random.options[i])
+  const shuffledCorrectIdx = indices.indexOf(random.correct_idx)
+
+  return NextResponse.json({ ...random, options: shuffledOptions, correct_idx: shuffledCorrectIdx, _resetSeen })
 }
