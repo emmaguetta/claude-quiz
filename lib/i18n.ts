@@ -58,8 +58,9 @@ const translations = {
       toggleToSignUp: "S'inscrire",
       backHome: "← Retour à l'accueil",
       checkEmailTitle: 'Vérifie ta boîte mail',
-      checkEmailMessage: (email: string) => `Un lien de confirmation a été envoyé à ${email}. Clique dessus pour activer ton compte.`,
+      checkEmailMessage: (email: string) => `Un lien de confirmation a été envoyé à ${email}. Clique dessus pour activer ton compte, puis reviens ici pour te connecter avec ton email et mot de passe.`,
       back: 'Retour',
+      authCallbackError: 'La confirmation a échoué (le lien a peut-être été ouvert dans un autre navigateur). Connecte-toi avec ton email et mot de passe ci-dessous.',
     },
     // Onboarding
     onboarding: {
@@ -252,7 +253,8 @@ const translations = {
       toggleToSignUp: 'Sign up',
       backHome: '← Back to home',
       checkEmailTitle: 'Check your inbox',
-      checkEmailMessage: (email: string) => `A confirmation link has been sent to ${email}. Click it to activate your account.`,
+      checkEmailMessage: (email: string) => `A confirmation link has been sent to ${email}. Click it to activate your account, then come back here to sign in with your email and password.`,
+      authCallbackError: 'Confirmation failed (the link may have opened in a different browser). Sign in with your email and password below.',
       back: 'Back',
     },
     onboarding: {

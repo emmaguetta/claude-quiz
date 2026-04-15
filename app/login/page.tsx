@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,8 +19,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [checkEmail, setCheckEmail] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const { t } = useLocale()
+  const authError = searchParams.get('error') === 'auth'
 
   async function handleEmailAuth(e: React.FormEvent) {
     e.preventDefault()
@@ -103,6 +105,13 @@ export default function LoginPage() {
               : t.login.subtitleSignIn}
           </p>
         </div>
+
+        {/* Auth callback error */}
+        {authError && (
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-300/90">
+            {t.login.authCallbackError}
+          </div>
+        )}
 
         {/* Social login */}
         <div className="space-y-3">
