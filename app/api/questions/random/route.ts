@@ -35,7 +35,14 @@ export async function GET(request: Request) {
     [indices[i], indices[j]] = [indices[j], indices[i]]
   }
   const shuffledOptions = indices.map(i => random.options[i])
-  const shuffledCorrectIdx = indices.indexOf(random.correct_idx)
 
-  return NextResponse.json({ ...random, options: shuffledOptions, correct_idx: shuffledCorrectIdx, _resetSeen })
+  // Strip answer data — client must use /api/questions/answer to verify
+  const { correct_idx: _c, explanation: _e, learn_more: _l, source_url: _s, ...safeQuestion } = random
+
+  return NextResponse.json({
+    ...safeQuestion,
+    options: shuffledOptions,
+    shuffle_map: indices,
+    _resetSeen,
+  })
 }

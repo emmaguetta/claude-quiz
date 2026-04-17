@@ -37,6 +37,8 @@ const translations = {
       summaryCorrectAnswer: 'Bonne réponse',
       summaryWhy: 'Pourquoi ?',
       viewRecap: 'Voir le bilan →',
+      allCategories: 'Toutes catégories',
+      allDifficulties: 'Toutes difficultés',
     },
     // Login
     login: {
@@ -65,7 +67,19 @@ const translations = {
     // Onboarding
     onboarding: {
       welcome: 'Bienvenue',
-      step: (n: number) => `Étape ${n}/3`,
+      step: (n: number) => `Étape ${n}/4`,
+      profile: {
+        title: "Comment tu t'appelles ?",
+        description: 'Pour personnaliser ton expérience.',
+        firstNameLabel: 'Prénom',
+        firstNamePlaceholder: 'Ton prénom',
+        lastNameLabel: 'Nom',
+        lastNamePlaceholder: 'Ton nom',
+        linkedinLabel: 'LinkedIn (optionnel)',
+        linkedinPlaceholder: 'https://linkedin.com/in/…',
+        companyLabel: 'Entreprise',
+        companyPlaceholder: 'Ton entreprise',
+      },
       activities: {
         title: 'Quelle est ton activité ?',
         description: 'Aide-nous à personnaliser ton expérience.',
@@ -233,6 +247,8 @@ const translations = {
       summaryCorrectAnswer: 'Correct answer',
       summaryWhy: 'Why?',
       viewRecap: 'View recap →',
+      allCategories: 'All categories',
+      allDifficulties: 'All difficulties',
     },
     login: {
       titleSignUp: 'Create an account',
@@ -259,7 +275,19 @@ const translations = {
     },
     onboarding: {
       welcome: 'Welcome',
-      step: (n: number) => `Step ${n}/3`,
+      step: (n: number) => `Step ${n}/4`,
+      profile: {
+        title: "What's your name?",
+        description: 'To personalize your experience.',
+        firstNameLabel: 'First name',
+        firstNamePlaceholder: 'Your first name',
+        lastNameLabel: 'Last name',
+        lastNamePlaceholder: 'Your last name',
+        linkedinLabel: 'LinkedIn (optional)',
+        linkedinPlaceholder: 'https://linkedin.com/in/…',
+        companyLabel: 'Company',
+        companyPlaceholder: 'Your company',
+      },
       activities: {
         title: "What's your role?",
         description: 'Help us personalize your experience.',

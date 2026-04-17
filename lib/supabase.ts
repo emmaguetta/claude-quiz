@@ -38,6 +38,20 @@ export type Question = {
   created_at: string
 }
 
+/** Question as sent to the client — no answer data */
+export type QuestionPublic = Omit<Question, 'correct_idx' | 'explanation' | 'learn_more' | 'source_url'> & {
+  shuffle_map: number[]
+}
+
+/** Server response when checking an answer */
+export type AnswerResult = {
+  correct_idx: number
+  is_correct: boolean
+  explanation: string
+  learn_more: string | null
+  source_url: string | null
+}
+
 export type Profile = {
   id: string
   activities: string[]

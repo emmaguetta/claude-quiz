@@ -6,6 +6,10 @@ import { redirect } from 'next/navigation'
 import type { DeveloperFilter } from '@/components/QuizFilters'
 
 type OnboardingData = {
+  first_name: string
+  last_name: string
+  linkedin_url?: string
+  company: string
   activities: string[]
   usage_level: 'never' | 'sometimes' | 'often' | 'daily'
   goals: string[]
@@ -25,6 +29,10 @@ export async function saveProfile(data: OnboardingData): Promise<PreselectedFilt
 
   await supabase.from('profiles').upsert({
     id: user.id,
+    first_name: data.first_name,
+    last_name: data.last_name,
+    linkedin_url: data.linkedin_url || null,
+    company: data.company,
     activities: data.activities,
     usage_level: data.usage_level,
     goals: data.goals,

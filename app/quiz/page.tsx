@@ -13,7 +13,7 @@ import { useAuth } from '@/components/AuthProvider'
 import { useLocale } from '@/components/LocaleProvider'
 import { LocaleToggle } from '@/components/LocaleToggle'
 import { createClient } from '@/lib/supabase/client'
-import type { Question } from '@/lib/supabase'
+import type { Question, QuestionPublic, AnswerResult } from '@/lib/supabase'
 
 const SESSION_KEY = 'claude-quiz-session'
 const HI_SCORES_KEY = 'claude-quiz-hiscores'
@@ -152,7 +152,8 @@ export default function QuizPage() {
   const { locale, t } = useLocale()
   const supabase = useMemo(() => createClient(), [])
   const sessionIdRef = useRef<string>(newSessionId())
-  const [question, setQuestion] = useState<Question | null>(null)
+  const [question, setQuestion] = useState<QuestionPublic | null>(null)
+  const [answerResult, setAnswerResult] = useState<AnswerResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
@@ -180,6 +181,7 @@ export default function QuizPage() {
     setLoading(true)
     setError(null)
     setSelectedIdx(null)
+    setAnswerResult(null)
 
     const params = new URLSearchParams()
     if (opts.categories.length > 0) params.set('categories', opts.categories.join(','))
@@ -202,7 +204,7 @@ export default function QuizPage() {
         })
       }
 
-      setQuestion(questionData as Question)
+      setQuestion(questionData as QuestionPublic)
     } catch (e) {
       setError(e instanceof Error ? e.message : t.quiz.unknownError)
     } finally {
@@ -253,61 +255,89 @@ export default function QuizPage() {
       .catch(() => {})
   }, [fetchQuestion, locale])
 
-  function handleSelect(idx: number) {
+  async function handleSelect(idx: number) {
     if (selectedIdx !== null || !question || session.total >= TARGET) return
     setSelectedIdx(idx)
-    const isCorrect = idx === question.correct_idx
-    const next: SessionData = {
-      seen: [...session.seen, question.id],
-      correct: session.correct + (isCorrect ? 1 : 0),
-      total: session.total + 1,
-    }
-    setSession(next)
-    saveSession(next)
-    setSessionHistory(prev => [...prev, { question, selectedIdx: idx }])
 
-    // Persist attempt to DB for logged-in users (RLS enforces user_id = auth.uid())
-    if (user) {
-      const attemptQuestionId = question.id
-      const attemptSelectedIdx = idx
-      const attemptIsCorrect = isCorrect
-      const attemptSessionId = sessionIdRef.current
-      void supabase
-        .from('quiz_attempts')
-        .insert({
-          user_id: user.id,
-          question_id: attemptQuestionId,
-          selected_idx: attemptSelectedIdx,
-          is_correct: attemptIsCorrect,
-          session_id: attemptSessionId,
-        })
-        .then(({ error }) => {
-          if (error) {
-            // Non-fatal — local session keeps working even if tracking fails
-            console.warn('[quiz_attempts] insert failed', error.message)
-          }
-        })
-    }
+    try {
+      const res = await fetch('/api/questions/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: question.id,
+          selected_idx: idx,
+          shuffle_map: (question as QuestionPublic).shuffle_map,
+        }),
+      })
+      if (!res.ok) throw new Error('Answer check failed')
+      const result: AnswerResult = await res.json()
+      setAnswerResult(result)
 
-    // Save hi-score when session reaches exactly TARGET
-    if (next.total === TARGET) {
-      const entry: HiScore = {
-        correct: next.correct,
-        total: next.total,
-        categories,
-        difficulties,
-        date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+      const next: SessionData = {
+        seen: [...session.seen, question.id],
+        correct: session.correct + (result.is_correct ? 1 : 0),
+        total: session.total + 1,
       }
-      setHiScores(addHiScore(entry))
+      setSession(next)
+      saveSession(next)
+
+      // Build full question for history/recap
+      const fullQuestion: Question = {
+        ...question,
+        correct_idx: result.correct_idx,
+        explanation: result.explanation,
+        learn_more: result.learn_more,
+        source_url: result.source_url,
+      }
+      setSessionHistory(prev => [...prev, { question: fullQuestion, selectedIdx: idx }])
+
+      // Persist attempt to DB for logged-in users
+      if (user) {
+        void supabase
+          .from('quiz_attempts')
+          .insert({
+            user_id: user.id,
+            question_id: question.id,
+            selected_idx: idx,
+            is_correct: result.is_correct,
+            session_id: sessionIdRef.current,
+          })
+          .then(({ error: dbErr }) => {
+            if (dbErr) console.warn('[quiz_attempts] insert failed', dbErr.message)
+          })
+      }
+
+      // Save hi-score when session reaches exactly TARGET
+      if (next.total === TARGET) {
+        const entry: HiScore = {
+          correct: next.correct,
+          total: next.total,
+          categories,
+          difficulties,
+          date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+        }
+        setHiScores(addHiScore(entry))
+      }
+    } catch {
+      setError(t.quiz.unknownError)
+      setSelectedIdx(null)
     }
   }
 
   function handleNext() {
     if (session.total >= TARGET) return
-    if (question && selectedIdx !== null) {
-      setPrevQuestion({ question, selectedIdx })
+    if (question && selectedIdx !== null && answerResult) {
+      const fullQuestion: Question = {
+        ...question,
+        correct_idx: answerResult.correct_idx,
+        explanation: answerResult.explanation,
+        learn_more: answerResult.learn_more,
+        source_url: answerResult.source_url,
+      }
+      setPrevQuestion({ question: fullQuestion, selectedIdx })
     }
     setViewingPrev(false)
+    setAnswerResult(null)
     fetchQuestion({ seen: session.seen, categories, difficulties, developer: developerFilter })
   }
 
@@ -460,19 +490,19 @@ export default function QuizPage() {
                   <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-zinc-500">
                     {recapFilters.categories.length > 0
                       ? recapFilters.categories.map(c => (
-                          <span key={c} className="rounded-full border border-zinc-700 px-3 py-1 capitalize">{c}</span>
+                          <span key={c} className="rounded-full border border-zinc-700 px-3 py-1">{t.filters.categories[c] ?? c}</span>
                         ))
-                      : <span className="rounded-full border border-zinc-700 px-3 py-1">{locale === 'fr' ? 'Toutes catégories' : 'All categories'}</span>
+                      : <span className="rounded-full border border-zinc-700 px-3 py-1">{t.quiz.allCategories}</span>
                     }
                     {recapFilters.difficulties.length > 0
                       ? recapFilters.difficulties.map(d => (
-                          <span key={d} className="rounded-full border border-zinc-700 px-3 py-1 capitalize">{d}</span>
+                          <span key={d} className="rounded-full border border-zinc-700 px-3 py-1">{t.filters.difficulties[d] ?? d}</span>
                         ))
-                      : <span className="rounded-full border border-zinc-700 px-3 py-1">{locale === 'fr' ? 'Toutes difficultés' : 'All difficulties'}</span>
+                      : <span className="rounded-full border border-zinc-700 px-3 py-1">{t.quiz.allDifficulties}</span>
                     }
                     {recapFilters.developer && (
                       <span className="rounded-full border border-zinc-700 px-3 py-1">
-                        {recapFilters.developer === 'only' ? 'Dev' : 'Non-dev'}
+                        {recapFilters.developer === 'only' ? t.filters.dev : t.filters.nonDev}
                       </span>
                     )}
                   </div>
@@ -544,13 +574,17 @@ export default function QuizPage() {
                         {t.quiz.prevQuestion}
                       </button>
                     )}
-                    <QuizCard question={question} selectedIdx={selectedIdx} onSelect={handleSelect} />
-                    {selectedIdx !== null && (
-                      <>
-                        <AnswerFeedback
-                          question={question}
-                          selectedIdx={selectedIdx}
-                          onNext={sessionComplete ? () => {
+                    <QuizCard
+                      question={question as unknown as Question}
+                      selectedIdx={selectedIdx}
+                      onSelect={handleSelect}
+                      verifying={selectedIdx !== null && !answerResult}
+                    />
+                    {selectedIdx !== null && answerResult && (
+                      <AnswerFeedback
+                        question={{ ...question, ...answerResult } as Question}
+                        selectedIdx={selectedIdx}
+                        onNext={sessionComplete ? () => {
                           const score = { correct: session.correct, total: session.total }
                           const filters = { categories, difficulties, developer: developerFilter }
                           setRecapScore(score)
@@ -558,11 +592,10 @@ export default function QuizPage() {
                           setShowRecap(true)
                           saveRecap({ score, filters, history: sessionHistory })
                         } : handleNext}
-                          sessionCount={session.total}
-                          hideNext={false}
-                          nextLabel={sessionComplete ? t.quiz.viewRecap : undefined}
-                        />
-                      </>
+                        sessionCount={session.total}
+                        hideNext={false}
+                        nextLabel={sessionComplete ? t.quiz.viewRecap : undefined}
+                      />
                     )}
                   </>
                 )}

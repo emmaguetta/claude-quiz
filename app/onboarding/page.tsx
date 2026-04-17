@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { OnboardingStep } from '@/components/OnboardingStep'
 import { saveProfile } from '@/app/actions/profile'
+import { useAuth } from '@/components/AuthProvider'
 import { useLocale } from '@/components/LocaleProvider'
 import { LocaleToggle } from '@/components/LocaleToggle'
 
@@ -22,14 +23,26 @@ function loadOnboardingState() {
   }
 }
 
-function saveOnboardingState(state: { step: number; activities: string[]; usageLevel: string[]; goals: string[] }) {
+function saveOnboardingState(state: { step: number; firstName: string; lastName: string; linkedinUrl: string; company: string; activities: string[]; usageLevel: string[]; goals: string[] }) {
   sessionStorage.setItem(ONBOARDING_STATE_KEY, JSON.stringify(state))
 }
 
 export default function OnboardingPage() {
+  const { user } = useAuth()
   const { t } = useLocale()
   const saved = loadOnboardingState()
+
+  // Pre-fill name from OAuth metadata
+  const oauthName = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? ''
+  const nameParts = typeof oauthName === 'string' ? oauthName.split(' ') : []
+  const defaultFirstName = saved?.firstName ?? (nameParts[0] || '')
+  const defaultLastName = saved?.lastName ?? (nameParts.slice(1).join(' ') || '')
+
   const [step, setStep] = useState(saved?.step ?? 0)
+  const [firstName, setFirstName] = useState(defaultFirstName)
+  const [lastName, setLastName] = useState(defaultLastName)
+  const [linkedinUrl, setLinkedinUrl] = useState(saved?.linkedinUrl ?? '')
+  const [company, setCompany] = useState(saved?.company ?? '')
   const [activities, setActivities] = useState<string[]>(saved?.activities ?? [])
   const [usageLevel, setUsageLevel] = useState<string[]>(saved?.usageLevel ?? [])
   const [goals, setGoals] = useState<string[]>(saved?.goals ?? [])
@@ -43,8 +56,8 @@ export default function OnboardingPage() {
 
   // Persist state on every change
   useEffect(() => {
-    saveOnboardingState({ step, activities, usageLevel, goals })
-  }, [step, activities, usageLevel, goals])
+    saveOnboardingState({ step, firstName, lastName, linkedinUrl, company, activities, usageLevel, goals })
+  }, [step, firstName, lastName, linkedinUrl, company, activities, usageLevel, goals])
 
   function toggleActivity(v: string) {
     setActivities(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])
@@ -59,8 +72,10 @@ export default function OnboardingPage() {
   }
 
   const canProceed = step === 0
-    ? activities.length > 0
+    ? firstName.trim().length > 0 && lastName.trim().length > 0 && company.trim().length > 0
     : step === 1
+    ? activities.length > 0
+    : step === 2
     ? usageLevel.length > 0
     : goals.length > 0
 
@@ -69,6 +84,10 @@ export default function OnboardingPage() {
     setError(null)
     try {
       const filters = await saveProfile({
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        linkedin_url: linkedinUrl.trim() || undefined,
+        company: company.trim(),
         activities,
         usage_level: usageLevel[0] as 'never' | 'sometimes' | 'often' | 'daily',
         goals,
@@ -87,7 +106,7 @@ export default function OnboardingPage() {
     }
   }
 
-  const progress = ((step + 1) / 3) * 100
+  const progress = ((step + 1) / 4) * 100
 
   return (
     <main className="min-h-screen text-zinc-100 flex items-center justify-center px-4">
@@ -106,6 +125,70 @@ export default function OnboardingPage() {
 
         {/* Steps */}
         {step === 0 && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-zinc-100">{t.onboarding.profile.title}</h2>
+              <p className="mt-1 text-base text-zinc-500">{t.onboarding.profile.description}</p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-zinc-400 mb-1.5">
+                  {t.onboarding.profile.firstNameLabel} <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  placeholder={t.onboarding.profile.firstNamePlaceholder}
+                  autoFocus
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-zinc-400 mb-1.5">
+                  {t.onboarding.profile.lastNameLabel} <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  value={lastName}
+                  onChange={e => setLastName(e.target.value)}
+                  placeholder={t.onboarding.profile.lastNamePlaceholder}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label htmlFor="company" className="block text-sm font-medium text-zinc-400 mb-1.5">
+                  {t.onboarding.profile.companyLabel} <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="company"
+                  type="text"
+                  value={company}
+                  onChange={e => setCompany(e.target.value)}
+                  placeholder={t.onboarding.profile.companyPlaceholder}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label htmlFor="linkedin" className="block text-sm font-medium text-zinc-400 mb-1.5">
+                  {t.onboarding.profile.linkedinLabel}
+                </label>
+                <input
+                  id="linkedin"
+                  type="url"
+                  value={linkedinUrl}
+                  onChange={e => setLinkedinUrl(e.target.value)}
+                  placeholder={t.onboarding.profile.linkedinPlaceholder}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 transition-colors"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 1 && (
           <OnboardingStep
             title={t.onboarding.activities.title}
             description={t.onboarding.activities.description}
@@ -116,7 +199,7 @@ export default function OnboardingPage() {
           />
         )}
 
-        {step === 1 && (
+        {step === 2 && (
           <OnboardingStep
             title={t.onboarding.usage.title}
             description={t.onboarding.usage.description}
@@ -127,7 +210,7 @@ export default function OnboardingPage() {
           />
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <OnboardingStep
             title={t.onboarding.goals.title}
             description={t.onboarding.goals.description}
@@ -155,7 +238,7 @@ export default function OnboardingPage() {
             <div />
           )}
 
-          {step < 2 ? (
+          {step < 3 ? (
             <Button
               onClick={() => setStep(step + 1)}
               disabled={!canProceed}

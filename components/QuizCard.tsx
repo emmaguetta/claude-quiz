@@ -18,11 +18,12 @@ type Props = {
   question: Question
   selectedIdx: number | null
   onSelect: (idx: number) => void
+  verifying?: boolean
 }
 
-export function QuizCard({ question, selectedIdx, onSelect }: Props) {
+export function QuizCard({ question, selectedIdx, onSelect, verifying }: Props) {
   const { t } = useLocale()
-  const answered = selectedIdx !== null
+  const answered = selectedIdx !== null && !verifying
 
   return (
     <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur">
@@ -52,7 +53,11 @@ export function QuizCard({ question, selectedIdx, onSelect }: Props) {
           let optionClass =
             'w-full text-left px-5 py-4 rounded-lg border text-base transition-all duration-200 flex items-center gap-3 '
 
-          if (!answered) {
+          if (verifying && isSelected) {
+            optionClass += 'border-zinc-500 bg-zinc-800 text-zinc-300 cursor-default animate-pulse'
+          } else if (verifying) {
+            optionClass += 'border-zinc-800 bg-zinc-900/30 text-zinc-500 cursor-default'
+          } else if (!answered) {
             optionClass += 'border-zinc-700 bg-zinc-800/50 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800 cursor-pointer'
           } else if (isCorrect) {
             optionClass += 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 cursor-default'
@@ -66,8 +71,8 @@ export function QuizCard({ question, selectedIdx, onSelect }: Props) {
             <button
               key={idx}
               className={optionClass}
-              onClick={() => !answered && onSelect(idx)}
-              disabled={answered}
+              onClick={() => !answered && !verifying && onSelect(idx)}
+              disabled={answered || verifying}
             >
               <span className="shrink-0 w-7 h-7 rounded-md border border-current flex items-center justify-center text-sm font-mono font-bold">
                 {OPTION_LABELS[idx]}
