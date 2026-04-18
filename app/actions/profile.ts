@@ -8,6 +8,7 @@ import type { DeveloperFilter } from '@/components/QuizFilters'
 type OnboardingData = {
   first_name: string
   last_name: string
+  display_name: string
   linkedin_url?: string
   company: string
   activities: string[]
@@ -31,6 +32,7 @@ export async function saveProfile(data: OnboardingData): Promise<PreselectedFilt
     id: user.id,
     first_name: data.first_name,
     last_name: data.last_name,
+    display_name: data.display_name,
     linkedin_url: data.linkedin_url || null,
     company: data.company,
     activities: data.activities,

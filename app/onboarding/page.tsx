@@ -23,7 +23,7 @@ function loadOnboardingState() {
   }
 }
 
-function saveOnboardingState(state: { step: number; firstName: string; lastName: string; linkedinUrl: string; company: string; activities: string[]; usageLevel: string[]; goals: string[] }) {
+function saveOnboardingState(state: { step: number; firstName: string; lastName: string; displayName: string; linkedinUrl: string; company: string; activities: string[]; usageLevel: string[]; goals: string[] }) {
   sessionStorage.setItem(ONBOARDING_STATE_KEY, JSON.stringify(state))
 }
 
@@ -41,6 +41,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(saved?.step ?? 0)
   const [firstName, setFirstName] = useState(defaultFirstName)
   const [lastName, setLastName] = useState(defaultLastName)
+  const [displayName, setDisplayName] = useState(saved?.displayName ?? '')
   const [linkedinUrl, setLinkedinUrl] = useState(saved?.linkedinUrl ?? '')
   const [company, setCompany] = useState(saved?.company ?? '')
   const [activities, setActivities] = useState<string[]>(saved?.activities ?? [])
@@ -56,8 +57,8 @@ export default function OnboardingPage() {
 
   // Persist state on every change
   useEffect(() => {
-    saveOnboardingState({ step, firstName, lastName, linkedinUrl, company, activities, usageLevel, goals })
-  }, [step, firstName, lastName, linkedinUrl, company, activities, usageLevel, goals])
+    saveOnboardingState({ step, firstName, lastName, displayName, linkedinUrl, company, activities, usageLevel, goals })
+  }, [step, firstName, lastName, displayName, linkedinUrl, company, activities, usageLevel, goals])
 
   function toggleActivity(v: string) {
     setActivities(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])
@@ -72,7 +73,7 @@ export default function OnboardingPage() {
   }
 
   const canProceed = step === 0
-    ? firstName.trim().length > 0 && lastName.trim().length > 0 && company.trim().length > 0
+    ? firstName.trim().length > 0 && lastName.trim().length > 0 && displayName.trim().length > 0 && company.trim().length > 0
     : step === 1
     ? activities.length > 0
     : step === 2
@@ -86,6 +87,7 @@ export default function OnboardingPage() {
       const filters = await saveProfile({
         first_name: firstName.trim(),
         last_name: lastName.trim(),
+        display_name: displayName.trim(),
         linkedin_url: linkedinUrl.trim() || undefined,
         company: company.trim(),
         activities,
@@ -157,6 +159,20 @@ export default function OnboardingPage() {
                   placeholder={t.onboarding.profile.lastNamePlaceholder}
                   className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 transition-colors"
                 />
+              </div>
+              <div>
+                <label htmlFor="displayName" className="block text-sm font-medium text-zinc-400 mb-1.5">
+                  {t.onboarding.profile.displayNameLabel} <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="displayName"
+                  type="text"
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  placeholder={t.onboarding.profile.displayNamePlaceholder}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 transition-colors"
+                />
+                <p className="mt-1 text-xs text-zinc-600">{t.onboarding.profile.displayNameHint}</p>
               </div>
               <div>
                 <label htmlFor="company" className="block text-sm font-medium text-zinc-400 mb-1.5">

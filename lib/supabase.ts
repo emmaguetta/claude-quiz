@@ -54,6 +54,11 @@ export type AnswerResult = {
 
 export type Profile = {
   id: string
+  first_name: string | null
+  last_name: string | null
+  display_name: string | null
+  company: string | null
+  linkedin_url: string | null
   activities: string[]
   usage_level: 'never' | 'sometimes' | 'often' | 'daily'
   goals: string[]
@@ -80,4 +85,64 @@ export type UserQuizStats = {
   total_sessions: number
   first_attempt_at: string
   last_attempt_at: string
+}
+
+// ── MCP Search types ──
+
+export type Mcp = {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  categories: string[]
+  source_url: string | null
+  repo_url: string | null
+  icon_url: string | null
+  smithery_id: string | null
+  tools_count: number
+  verified: boolean
+  use_count: number
+  github_stars: number
+  last_commit_at: string | null
+  quality_score: number
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type McpTool = {
+  id: string
+  mcp_id: string
+  name: string
+  description: string | null
+  input_schema: Record<string, unknown> | null
+  created_at: string
+}
+
+export type McpChunk = {
+  id: string
+  mcp_id: string
+  chunk_type: 'mcp' | 'tool' | 'tool_group'
+  content: string
+  tool_name: string | null
+  embedding: number[] | null
+  created_at: string
+}
+
+export type McpSearchResult = {
+  mcp_id: string
+  mcp_name: string
+  mcp_description: string | null
+  mcp_slug: string
+  mcp_categories: string[]
+  mcp_repo_url: string | null
+  mcp_icon_url: string | null
+  mcp_verified: boolean
+  mcp_tools_count: number
+  mcp_quality_score: number
+  mcp_github_stars: number
+  chunk_type: string
+  chunk_content: string
+  chunk_tool_name: string | null
+  similarity: number
 }
