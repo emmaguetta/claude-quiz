@@ -579,7 +579,7 @@ export default function QuizPage() {
                       </button>
                     )}
                     <QuizCard
-                      question={question as unknown as Question}
+                      question={(answerResult ? { ...question, ...answerResult } : question) as unknown as Question}
                       selectedIdx={selectedIdx}
                       onSelect={handleSelect}
                       verifying={selectedIdx !== null && !answerResult}
