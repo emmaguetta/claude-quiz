@@ -14,11 +14,10 @@ type LeaderboardEntry = {
   unique_questions: number
 }
 
-const TABS = ['all', 'easy', 'medium', 'hard'] as const
+const TABS = ['easy', 'medium', 'hard'] as const
 type Tab = typeof TABS[number]
 
 const TAB_COLORS: Record<Tab, string> = {
-  all: 'text-purple-400 border-purple-400',
   easy: 'text-emerald-400 border-emerald-400',
   medium: 'text-amber-400 border-amber-400',
   hard: 'text-red-400 border-red-400',
@@ -30,10 +29,16 @@ const RANK_STYLES = [
   'text-amber-600 font-bold',
 ]
 
+function scoreColor(pct: number): string {
+  if (pct >= 80) return 'text-emerald-400'
+  if (pct >= 60) return 'text-amber-400'
+  return 'text-red-400'
+}
+
 export function Leaderboard() {
   const { t } = useLocale()
   const { user } = useAuth()
-  const [tab, setTab] = useState<Tab>('all')
+  const [tab, setTab] = useState<Tab>('easy')
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -94,21 +99,13 @@ export function Leaderboard() {
         </div>
       ) : (
         <div className="space-y-1.5">
-          {/* Column headers */}
-          <div className="flex items-center gap-4 px-4 py-2 text-xs text-zinc-600 uppercase tracking-wider">
-            <span className="w-8">{t.leaderboard.columns.rank}</span>
-            <span className="flex-1">{t.leaderboard.columns.player}</span>
-            <span className="w-20 text-right">{t.leaderboard.columns.score}</span>
-            <span className="w-16 text-right hidden sm:block">{t.leaderboard.columns.played}</span>
-          </div>
-
           {entries.map(entry => {
             const isYou = user?.id === entry.user_id
 
             return (
               <div
                 key={`${entry.user_id}-${tab}`}
-                className={`flex items-center gap-4 px-4 py-3 rounded text-sm border transition-colors ${
+                className={`flex items-center gap-3 sm:gap-4 px-4 py-3 rounded text-sm border transition-colors ${
                   isYou
                     ? 'border-purple-500/30 bg-purple-500/5'
                     : entry.rank === 1
@@ -117,30 +114,32 @@ export function Leaderboard() {
                 }`}
               >
                 {/* Rank */}
-                <span className={`w-8 shrink-0 ${RANK_STYLES[entry.rank - 1] ?? 'text-zinc-600'}`}>
+                <span className={`w-8 shrink-0 text-base ${RANK_STYLES[entry.rank - 1] ?? 'text-zinc-600'}`}>
                   #{entry.rank}
                 </span>
 
-                {/* Player name */}
-                <span className={`flex-1 min-w-0 truncate ${isYou ? 'text-purple-300' : 'text-zinc-300'}`}>
-                  {entry.display_name}
-                  {isYou && (
-                    <span className="ml-1.5 text-xs text-purple-500">{t.leaderboard.you}</span>
-                  )}
-                </span>
+                {/* Player name + difficulty tags */}
+                <div className="flex-1 min-w-0 flex items-center gap-2">
+                  <span className={`truncate ${isYou ? 'text-purple-300 font-medium' : 'text-zinc-200'}`}>
+                    {entry.display_name}
+                    {isYou && (
+                      <span className="ml-1.5 text-xs text-purple-500">{t.leaderboard.you}</span>
+                    )}
+                  </span>
+                </div>
 
-                {/* Score */}
-                <span className={`w-20 text-right tabular-nums shrink-0 ${
-                  entry.rank === 1 ? 'text-yellow-400 font-bold' : 'text-zinc-300'
-                }`}>
-                  {entry.accuracy_pct}%
-                  <span className="ml-1 text-xs text-zinc-600">
+                {/* Score — big and colored */}
+                <div className="text-right shrink-0 tabular-nums">
+                  <span className={`text-lg font-bold ${scoreColor(entry.accuracy_pct)}`}>
+                    {entry.accuracy_pct}%
+                  </span>
+                  <span className="ml-1.5 text-xs text-zinc-600">
                     {entry.correct_attempts}/{entry.total_attempts}
                   </span>
-                </span>
+                </div>
 
                 {/* Questions played */}
-                <span className="w-16 text-right text-xs text-zinc-600 tabular-nums hidden sm:block">
+                <span className="w-10 text-right text-xs text-zinc-600 tabular-nums hidden sm:block shrink-0">
                   {entry.unique_questions}q
                 </span>
               </div>
