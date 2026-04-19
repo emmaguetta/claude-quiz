@@ -270,7 +270,10 @@ export default function QuizPage() {
           shuffle_map: (question as QuestionPublic).shuffle_map,
         }),
       })
-      if (!res.ok) throw new Error('Answer check failed')
+      const contentType = res.headers.get('content-type') ?? ''
+      if (!res.ok || !contentType.includes('application/json')) {
+        throw new Error('Answer check failed')
+      }
       const result: AnswerResult = await res.json()
       setAnswerResult(result)
 
