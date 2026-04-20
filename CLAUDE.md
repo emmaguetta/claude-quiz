@@ -44,6 +44,8 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 CRON_SECRET                  ← protège POST /api/questions/generate
+NEXT_PUBLIC_TURNSTILE_SITE_KEY ← Cloudflare Turnstile (CAPTCHA inscription)
+TURNSTILE_SECRET_KEY         ← Cloudflare Turnstile (vérification serveur)
 VERCEL_OIDC_TOKEN            ← auto-provisionné par `vercel env pull`
 ```
 
@@ -83,3 +85,88 @@ curl -X POST http://localhost:3000/api/questions/generate \
 - Composants shadcn : `Button`, `Card`, `Badge`, `Progress`
 - Police : Geist Sans (interface) + Geist Mono (code/commandes)
 - Pas de lumière : le fond est toujours `bg-zinc-950`
+
+## Feature : MCP Search Engine (fonctionnel)
+
+Moteur de recherche sémantique pour les MCPs (Model Context Protocol servers). L'utilisateur tape ce qu'il veut faire en langage naturel → on retourne les MCPs pertinents avec les outils précis qui matchent.
+
+**Données en base** : 4 764 MCPs, 32 347 outils, 37 011 embeddings (source : Smithery.ai).
+
+### Architecture
+
+- **Recherche** : embeddings multi-chunk (1 par outil + 1 global par MCP) → pgvector sur Supabase
+- **Ranking hybride** : 55% cosine similarity + 30% keyword ratio + 10% multi-match boost + 5% quality score
+  - Le keyword ratio extrait les mots discriminants (filtre stop words + verbes génériques) et mesure combien apparaissent dans nom+description du MCP
+- **Explication IA** : GPT-4.1 nano génère une explication quand on ouvre un MCP
+- **Analyse approfondie** : GPT-4.1 nano évalue chaque MCP **individuellement** (batches de 10 en parallèle), strict platform matching, cache sessionStorage 24h. 10/mois/user, login requis.
+- **Données enrichies** : GitHub stars (API GitHub), use count (Smithery), pricing vérifié par web search (107 MCPs, colonne `pricing_confidence`)
+- **Coûts IA** : loggés dans `ai_usage_logs`, dashboard sur `/admin/usage`
+
+### Documentation
+
+| Fichier | Contenu |
+|---------|---------|
+| `docs/mcp-search/RESEARCH.md` | Recherche : écosystème MCP, sources, approches comparées, problèmes, coûts |
+| `docs/mcp-search/PLAN.md` | Plan d'implémentation initial (5 phases) |
+| `docs/mcp-search/STATUS.md` | Statut actuel détaillé, ce qui marche/manque, décisions |
+| `docs/SECURITY.md` | Auth, rate limiting, anti-scraping, secrets, protection des coûts |
+
+### Structure des fichiers MCP
+
+```
+scripts/mcp/
+  scrape-smithery.ts       → scraping Smithery.ai (4764 MCPs)
+  generate-embeddings.ts   → génération embeddings (37K chunks)
+scripts/
+  fetch-github-stars.ts    → récupération stars GitHub pour tous les MCPs avec repo
+
+app/api/mcp/
+  search/route.ts          → recherche vectorielle hybride (embeddings + keyword)
+  browse/route.ts          → navigation par catégorie/tool avec tri
+  categories/route.ts      → catégories groupées
+  explain/route.ts         → explication IA d'un MCP (auth + rate limit)
+  deep-analyze/route.ts    → analyse approfondie IA 1-par-1 (auth + 10/mois)
+  saved/route.ts           → MCPs sauvegardés (auth)
+  usage/route.ts           → dashboard coûts (CRON_SECRET)
+
+app/mcp-search/
+  page.tsx                 → page de recherche principale
+
+components/mcp/
+  McpSearchInput.tsx       → barre de recherche (avec bouton clear X)
+  McpSearchResults.tsx     → grille de résultats
+  McpCard.tsx              → card MCP (stars, users, pricing badge)
+  McpCategoryFilters.tsx   → filtres catégories groupés
+  McpSortSelect.tsx        → tri (qualité, populaire, alphabétique)
+  McpDetailSheet.tsx       → panneau détail + explication IA
+  McpDeepAnalysis.tsx      → bandeau analyse approfondie
+
+lib/
+  ai-usage.ts              → logging des coûts IA
+  rate-limit.ts            → rate limiting en mémoire
+  api-auth.ts              → helper auth pour API routes
+  mcp-categories.ts        → taxonomie des catégories MCP
+```
+
+### Tables Supabase
+
+- `mcps` — 4 764 MCPs (nom, description, catégories, quality_score, source_url, repo_url, github_stars, use_count, pricing_type, pricing_note, pricing_confidence)
+- `mcp_tools` — 32 347 outils (nom, description, input_schema)
+- `mcp_chunks` — 37 011 embeddings vectoriels (VECTOR(1536), chunk_type, content)
+- `ai_usage_logs` — log de chaque appel IA (endpoint, modèle, tokens, coût)
+- `deep_analysis_usage` — compteur d'analyses approfondies par user/mois
+
+### Sécurité
+
+- **CAPTCHA** : Cloudflare Turnstile (gratuit, invisible) sur l'inscription email — vérification serveur via `/api/auth/verify-captcha`
+- Toutes les API routes requièrent l'authentification Supabase
+- Rate limiting : 10 recherches/min, 5 explain/min, 10 questions/min
+- Analyse approfondie : 10/mois/user
+- Détails complets dans `docs/SECURITY.md`
+
+### Scripts npm
+
+```bash
+npm run mcp:scrape    # scraper les MCPs depuis Smithery
+npm run mcp:embed     # générer les embeddings
+```

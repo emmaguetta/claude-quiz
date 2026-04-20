@@ -1,13 +1,20 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const PUBLIC_PATHS = ['/', '/login', '/auth/callback']
+const PUBLIC_PATHS = ['/', '/login', '/auth/callback', '/faq']
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Skip public paths and API routes
-  if (PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/api/')) {
+  // Skip public paths, API routes, and SEO/meta files
+  if (
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname.startsWith('/api/') ||
+    pathname === '/sitemap.xml' ||
+    pathname === '/robots.txt' ||
+    pathname === '/manifest.webmanifest' ||
+    pathname.startsWith('/opengraph-image')
+  ) {
     return NextResponse.next()
   }
 

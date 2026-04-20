@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,6 +12,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useLocale } from '@/components/LocaleProvider'
 import { LocaleToggle } from '@/components/LocaleToggle'
 
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''
+
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
@@ -18,6 +21,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [checkEmail, setCheckEmail] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileInstance>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -30,6 +35,27 @@ export default function LoginPage() {
     setLoading(true)
 
     if (isSignUp) {
+      // Vérifier le CAPTCHA côté serveur avant de créer le compte
+      if (TURNSTILE_SITE_KEY && !captchaToken) {
+        setError(t.login.captchaRequired)
+        setLoading(false)
+        return
+      }
+      if (TURNSTILE_SITE_KEY && captchaToken) {
+        const captchaRes = await fetch('/api/auth/verify-captcha', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: captchaToken }),
+        })
+        if (!captchaRes.ok) {
+          setError(t.login.captchaFailed)
+          turnstileRef.current?.reset()
+          setCaptchaToken(null)
+          setLoading(false)
+          return
+        }
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -37,6 +63,8 @@ export default function LoginPage() {
       })
       if (error) {
         setError(error.message)
+        turnstileRef.current?.reset()
+        setCaptchaToken(null)
       } else {
         setCheckEmail(true)
       }
@@ -171,9 +199,20 @@ export default function LoginPage() {
             <p className="text-sm text-red-400">{error}</p>
           )}
 
+          {isSignUp && TURNSTILE_SITE_KEY && (
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={TURNSTILE_SITE_KEY}
+              onSuccess={setCaptchaToken}
+              onError={() => setCaptchaToken(null)}
+              onExpire={() => setCaptchaToken(null)}
+              options={{ theme: 'dark', size: 'flexible' }}
+            />
+          )}
+
           <Button
             type="submit"
-            disabled={loading}
+            disabled={loading || (isSignUp && !!TURNSTILE_SITE_KEY && !captchaToken)}
             className="w-full bg-zinc-100 text-zinc-900 hover:bg-white py-5 font-semibold"
           >
             {loading ? t.login.loading : isSignUp ? t.login.submitSignUp : t.login.submitSignIn}

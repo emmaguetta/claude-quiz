@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getAuthUser } from '@/lib/api-auth'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
+  const user = await getAuthUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { allowed } = rateLimit(`answer:${getClientIp(request)}`, { maxRequests: 10, windowMs: 60_000 })
+  if (!allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+
   const body = await request.json()
   const { question_id, selected_idx, shuffle_map } = body as {
     question_id: string

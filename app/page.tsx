@@ -14,12 +14,12 @@ export default function Home() {
   const { user, loading: authLoading } = useAuth()
   const { locale, t } = useLocale()
   const [count, setCount] = useState(0)
+  const [mcpCount, setMcpCount] = useState(0)
   const [isOnboarded, setIsOnboarded] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
 
-    // Fetch question count for current locale
     supabase
       .from('questions')
       .select('*', { count: 'exact', head: true })
@@ -29,7 +29,11 @@ export default function Home() {
         setCount(count ?? 0)
       })
 
-    // Check onboarded status if logged in
+    fetch('/api/mcp/categories')
+      .then(r => r.json())
+      .then(data => setMcpCount(data.total ?? 0))
+      .catch(() => {})
+
     if (user) {
       supabase
         .from('profiles')
@@ -75,7 +79,7 @@ export default function Home() {
         />
       </div>
 
-      <div className="relative z-10 max-w-lg w-full text-center space-y-10">
+      <div className="relative z-10 w-full max-w-5xl text-center space-y-12">
         {/* Badge */}
         <div className="flex justify-center">
           <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-sm px-4 py-1.5">
@@ -83,44 +87,57 @@ export default function Home() {
           </Badge>
         </div>
 
-        {/* Hero */}
-        <div className="space-y-5">
-          <h1 className="text-6xl uppercase text-zinc-50" style={{ fontFamily: "'Bitcount Single Ink', 'Jersey 10', cursive" }}>
-            <span className="block">{t.home.title}</span>
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-orange-500 drop-shadow-[0_0_30px_rgba(251,191,36,0.3)]">
-              Claude Code
-            </span>
-          </h1>
-          <p className="text-zinc-400 text-xl leading-relaxed">
-            {t.home.subtitle}
-          </p>
-        </div>
+        {/* Hero title */}
+        <h1 className="text-6xl uppercase text-zinc-50" style={{ fontFamily: "'Bitcount Single Ink', 'Jersey 10', cursive" }}>
+          <span className="block">{t.home.title}</span>
+          <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-orange-500 drop-shadow-[0_0_30px_rgba(251,191,36,0.3)]">
+            Claude Code
+          </span>
+        </h1>
 
-        {/* CTA */}
-        <div className="flex flex-col items-center gap-4">
-          <Link href={ctaHref}>
-            <Button
-              size="lg"
-              className="bg-zinc-100 text-zinc-900 hover:bg-white font-semibold px-10 py-7 text-lg"
-            >
-              {t.home.cta}
-            </Button>
-          </Link>
-          {count > 0 && (
-            <p className="text-sm text-zinc-600">{t.home.questionsAvailable(count)}</p>
-          )}
-        </div>
+        {/* Two cards side by side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
 
-        {/* Topics */}
-        <div className="flex flex-wrap justify-center gap-2 pt-2">
-          {t.home.topics.map((topic) => (
-            <span
-              key={topic}
-              className="text-sm px-4 py-1.5 rounded-full border border-zinc-800 text-zinc-500"
-            >
-              {topic}
-            </span>
-          ))}
+          {/* Quiz card */}
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🧠</span>
+                <h2 className="text-xl font-semibold text-zinc-100">{t.home.quizTitle}</h2>
+              </div>
+              <p className="text-zinc-400 leading-relaxed">{t.home.subtitle}</p>
+              {count > 0 && (
+                <p className="text-sm text-zinc-600">{t.home.questionsAvailable(count)}</p>
+              )}
+            </div>
+
+            <Link href={ctaHref}>
+              <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:text-zinc-100 hover:border-zinc-500 font-semibold py-6 text-base">
+                {t.home.cta}
+              </Button>
+            </Link>
+          </div>
+
+          {/* MCP card */}
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🔌</span>
+                <h2 className="text-xl font-semibold text-zinc-100">{t.home.mcpTitle}</h2>
+              </div>
+              <p className="text-zinc-400 leading-relaxed">{t.home.mcpDesc}</p>
+              {mcpCount > 0 && (
+                <p className="text-sm text-zinc-600">{t.home.mcpsAvailable(mcpCount)}</p>
+              )}
+            </div>
+
+            <Link href="/mcp-search">
+              <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:text-zinc-100 hover:border-zinc-500 font-semibold py-6 text-base">
+                {t.mcpSearch.homeCta}
+              </Button>
+            </Link>
+          </div>
+
         </div>
       </div>
     </main>

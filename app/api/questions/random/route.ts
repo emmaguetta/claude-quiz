@@ -1,8 +1,23 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import type { Question } from '@/lib/supabase'
+import { getAuthUser } from '@/lib/api-auth'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export async function GET(request: Request) {
+  // Auth check
+  const user = await getAuthUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Rate limit: 60 questions per minute per IP
+  const ip = getClientIp(request)
+  const { allowed } = rateLimit(`questions:${ip}`, { maxRequests: 10, windowMs: 60_000 })
+  if (!allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const { searchParams } = new URL(request.url)
   const exclude = searchParams.get('exclude')?.split(',').filter(Boolean) ?? []
   const categories = searchParams.get('categories')?.split(',').filter(Boolean) ?? []

@@ -23,11 +23,17 @@ const TAB_COLORS: Record<Tab, string> = {
   hard: 'text-red-400 border-red-400',
 }
 
-const RANK_STYLES = [
-  'text-yellow-400 font-bold',
-  'text-zinc-300 font-bold',
-  'text-amber-600 font-bold',
-]
+const RANK_STYLES: Record<number, string> = {
+  1: 'font-bold',
+  2: 'font-bold',
+  3: 'font-bold',
+}
+
+const RANK_COLORS: Record<number, string> = {
+  1: '#ffd700',
+  2: '#c0c0c0',
+  3: '#cd7f32',
+}
 
 function scoreColor(pct: number): string {
   if (pct >= 80) return 'text-emerald-400'
@@ -70,6 +76,9 @@ export function Leaderboard() {
         <div className="flex-1 border-t border-dashed border-zinc-800" />
       </div>
 
+      {/* Subtitle */}
+      <p className="text-xs text-zinc-600 mb-4">{t.leaderboard.subtitle}</p>
+
       {/* Tabs */}
       <div className="flex gap-1 mb-4">
         {TABS.map(d => (
@@ -108,13 +117,14 @@ export function Leaderboard() {
                 className={`flex items-center gap-3 sm:gap-4 px-4 py-3 rounded text-sm border transition-colors ${
                   isYou
                     ? 'border-purple-500/30 bg-purple-500/5'
-                    : entry.rank === 1
-                    ? 'border-yellow-500/20 bg-yellow-500/5'
                     : 'border-zinc-800/60 bg-zinc-900/40'
                 }`}
               >
                 {/* Rank */}
-                <span className={`w-8 shrink-0 text-base ${RANK_STYLES[entry.rank - 1] ?? 'text-zinc-600'}`}>
+                <span
+                  className={`w-8 shrink-0 text-base ${RANK_STYLES[entry.rank] ?? 'text-zinc-600'}`}
+                  style={RANK_COLORS[entry.rank] ? { color: RANK_COLORS[entry.rank] } : undefined}
+                >
                   #{entry.rank}
                 </span>
 
@@ -128,18 +138,18 @@ export function Leaderboard() {
                   </span>
                 </div>
 
-                {/* Score — big and colored */}
-                <div className="text-right shrink-0 tabular-nums">
-                  <span className={`text-lg font-bold ${scoreColor(entry.accuracy_pct)}`}>
-                    {entry.accuracy_pct}%
-                  </span>
-                  <span className="ml-1.5 text-xs text-zinc-600">
-                    {entry.correct_attempts}/{entry.total_attempts}
-                  </span>
-                </div>
+                {/* Accuracy % */}
+                <span className="w-16 text-right text-sm font-bold tabular-nums shrink-0 text-zinc-200">
+                  {entry.accuracy_pct}%
+                </span>
 
-                {/* Questions played */}
-                <span className="w-10 text-right text-xs text-zinc-600 tabular-nums hidden sm:block shrink-0">
+                {/* Correct / Total */}
+                <span className="w-14 text-right text-xs text-zinc-500 tabular-nums shrink-0">
+                  {entry.correct_attempts}/{entry.total_attempts}
+                </span>
+
+                {/* Unique questions played */}
+                <span className="w-10 text-right text-xs text-zinc-600 tabular-nums shrink-0">
                   {entry.unique_questions}q
                 </span>
               </div>

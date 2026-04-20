@@ -10,6 +10,7 @@ import type { DeveloperFilter } from '@/components/QuizFilters'
 import { HiScores } from '@/components/HiScores'
 import type { HiScore } from '@/components/HiScores'
 import { Leaderboard } from '@/components/Leaderboard'
+import { UserStats } from '@/components/UserStats'
 import { useAuth } from '@/components/AuthProvider'
 import { useLocale } from '@/components/LocaleProvider'
 import { LocaleToggle } from '@/components/LocaleToggle'
@@ -623,6 +624,9 @@ export default function QuizPage() {
           )}
 
         </div>
+
+        {/* Personal stats */}
+        <UserStats />
 
         {/* Hi-score table (personal) */}
         <HiScores scores={hiScores} />

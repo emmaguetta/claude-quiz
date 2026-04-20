@@ -30,17 +30,17 @@ export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount, hi
             : 'border-red-500/30 bg-red-500/5'
         }`}
       >
-        <div className="flex items-center gap-2 mb-2">
+        <div className="space-y-1 mb-2">
           <span className={`text-xl font-medium ${isCorrect ? 'text-emerald-400' : 'text-red-400'}`}>
             {isCorrect ? t.feedback.correct : t.feedback.incorrect}
           </span>
           {!isCorrect && (
-            <span className="text-base text-zinc-400">
+            <p className="text-base text-zinc-400">
               {t.feedback.correctAnswer}{' '}
               <span className="text-emerald-400 font-medium">
                 {String.fromCharCode(65 + question.correct_idx)}. {question.options[question.correct_idx]}
               </span>
-            </span>
+            </p>
           )}
         </div>
         <p className="text-base text-zinc-300 leading-relaxed mt-2">{question.explanation}</p>
@@ -64,6 +64,11 @@ export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount, hi
               {t.feedback.viewDocs}
             </a>
           )}
+        </div>
+
+        {/* Report */}
+        <div className="mt-3 pt-3 border-t border-zinc-700/30 flex items-center gap-2 justify-end">
+          <span className="text-xs text-zinc-600">{t.feedback.reportHint}</span>
           <button
             onClick={async () => {
               if (reported || reporting) return
@@ -80,13 +85,13 @@ export function AnswerFeedback({ question, selectedIdx, onNext, sessionCount, hi
               }
             }}
             disabled={reported || reporting}
-            className={`text-sm transition-colors ml-auto ${
+            className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition-colors ${
               reported
-                ? 'text-amber-400 cursor-default'
-                : 'text-zinc-600 hover:text-amber-400'
+                ? 'border-amber-500/30 bg-amber-500/10 text-amber-400 cursor-default'
+                : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
             }`}
           >
-            {reported ? t.feedback.reported : reporting ? '…' : t.feedback.report}
+            {reported ? t.feedback.reported : reporting ? '…' : `${t.feedback.report}`}
           </button>
         </div>
 

@@ -1,9 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { AuthProvider } from "@/components/AuthProvider";
 import { LocaleProvider } from "@/components/LocaleProvider";
 import { SettingsMenu } from "@/components/SettingsMenu";
+import { DisplayNamePrompt } from "@/components/DisplayNamePrompt";
+import { JsonLd } from "@/components/JsonLd";
+import { Footer } from "@/components/Footer";
 import type { Locale } from "@/lib/i18n";
 import "./globals.css";
 
@@ -18,9 +21,46 @@ const geistMono = Geist_Mono({
 });
 
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://claudequiz.app'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#0a0a0a',
+}
+
 export const metadata: Metadata = {
-  title: "Claude Code Quiz",
-  description: "Apprends à maîtriser Claude Code à travers des quiz interactifs basés sur la documentation officielle.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'Claude Code Quiz — Learn & Explore',
+    template: '%s | Claude Code Quiz',
+  },
+  description: 'Master Claude Code with interactive quizzes and a semantic MCP search engine. 225+ questions, 4700+ MCPs.',
+  keywords: ['Claude Code', 'quiz', 'MCP', 'Model Context Protocol', 'Anthropic', 'CLI', 'AI tools', 'learning'],
+  authors: [{ name: 'Claude Code Quiz' }],
+  creator: 'Claude Code Quiz',
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    alternateLocale: 'fr_FR',
+    siteName: 'Claude Code Quiz',
+    title: 'Claude Code Quiz — Learn & Explore',
+    description: 'Master Claude Code with interactive quizzes and a semantic MCP search engine.',
+    url: siteUrl,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Claude Code Quiz — Learn & Explore',
+    description: 'Master Claude Code with interactive quizzes and a semantic MCP search engine.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large' as const, 'max-snippet': -1 },
+  },
+  alternates: {
+    canonical: '/',
+  },
 };
 
 export default async function RootLayout({
@@ -44,11 +84,39 @@ export default async function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=Bitcount+Single+Ink&display=block" rel="stylesheet" />
       </head>
       <body className="min-h-full flex flex-col" style={{ backgroundColor: '#1e1e1e' }}>
+        <JsonLd data={{
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'WebSite',
+              name: 'Claude Quiz',
+              url: siteUrl,
+              description: 'Interactive learning platform for Claude Code — 225+ quiz questions and 4700+ MCP server directory',
+              inLanguage: ['en', 'fr'],
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: `${siteUrl}/mcp-search?q={search_term_string}`,
+                'query-input': 'required name=search_term_string',
+              },
+            },
+            {
+              '@type': 'Organization',
+              name: 'Claude Quiz',
+              url: siteUrl,
+              logo: `${siteUrl}/icon.svg`,
+              sameAs: [
+                'https://github.com/emmaguetta/claude-quiz',
+              ],
+            },
+          ],
+        }} />
         <LocaleProvider initialLocale={initialLocale}>
           <AuthProvider>
             {children}
             <SettingsMenu />
+            <DisplayNamePrompt />
           </AuthProvider>
+          <Footer />
         </LocaleProvider>
       </body>
     </html>
