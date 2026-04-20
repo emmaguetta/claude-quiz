@@ -1,19 +1,105 @@
 # MCP Search Engine — Statut du projet
 
-> Dernière mise à jour : 2026-04-20
+> Dernière mise à jour : 2026-04-20 (après-midi)
+
+## Changements 2026-04-20 (après-midi)
+
+Cette section résume les évolutions de la session de l'après-midi du 20/04. Pour les détails antérieurs, voir les sections suivantes.
+
+### Problème détecté
+`search_mcps()` ne retournait PAS Gmail en top pour la query `"gmail"`. Les queries ultra-courtes (1 mot) produisent des embeddings bruités → cosine < seuil → Gmail exclu avant d'arriver au scoring keyword. Même constat pour `"slack"`, `"notion"`, etc.
+
+### Schéma : nouvelles colonnes
+
+| Colonne | Type | Rôle | Visible UI ? |
+|---------|------|------|--------------|
+| `mcps.tool_tags` | `text[]` | Tags brands (google, slack, github, openai, etc. — 56 brands) — permet filtre par outil | Oui (filtres sidebar) |
+| `mcps.search_keywords` | `text` | Synonymes + cas d'usage générés par LLM, stockés en virgules | **Non** — enrichit l'embedding et le LIKE match |
+
+### Index ajoutés
+
+- `idx_mcps_tool_tags` (GIN) — filtre rapide par brand
+- `mcps_name_trgm_idx`, `mcps_description_trgm_idx`, `mcps_search_keywords_trgm_idx` (GIN pg_trgm) — accélère les `LIKE '%word%'` du path keyword
+- **Extension pg_trgm activée** (nécessaire pour les index trgm ci-dessus)
+
+### RPC `search_mcps()` — refonte hybride complète
+
+Le RPC a été réécrit pour fixer le bug "gmail absent". Changements :
+
+1. **Paramètre ajouté** : `filter_tool_tags text[] DEFAULT NULL` → permet le filtre par brand côté API
+2. **Retour enrichi** : ajout de `mcp_tool_tags text[]` dans la table retournée
+3. **Nouveau path `keyword_mcps`** : union indépendante du path cosine — un MCP dont le nom/description/search_keywords contient un mot de la query est inclus même si son embedding n'atteint pas le seuil cosine. C'est ce qui fait que "gmail" retrouve Gmail.
+4. **Pondération rééquilibrée** :
+
+| Score | Avant | Après | Raison |
+|-------|-------|-------|--------|
+| Cosine similarity | 55% | **40%** | Plus de poids pour keywords vu que les embeddings courts sont bruités |
+| Keyword ratio (name + desc + search_keywords) | 30% | **30%** | Inchangé — maintenant lit aussi search_keywords |
+| Name match (binaire : mot présent dans le nom) | — | **20%** | Nouveau — bonus fort pour matching direct sur le nom |
+| Multi-match boost | 10% | 5% | Moins nécessaire avec le name_match |
+| Quality score | 5% | 5% | Inchangé |
+
+### Re-embedding avec descriptions enrichies
+
+Le content des `mcp_chunks` de type `mcp` inclut maintenant :
+```
+{description}. Categories: {cats}. {N} tools available. Keywords: {search_keywords}. [MCP: {name}]
+```
+→ Gain : même les queries sémantiques (non-mots-à-mots) trouvent les MCPs pertinents grâce aux keywords injectés dans l'embedding.
+
+### Enrichissement LLM des descriptions
+
+- **Script** : `scripts/mcp/enrich-search-keywords.ts`
+- **Modèle** : `gpt-4.1-nano` (le moins cher)
+- **Prompt** : génère 10-15 keywords (brands, synonymes, cas d'usage) par MCP
+- **Concurrence** : 10 appels en parallèle
+- **Résultat** : 4763/4764 MCPs enrichis
+- **Coût total** : ~$0.50
+
+### Re-génération des embeddings
+
+- **Script modifié** : `scripts/mcp/generate-embeddings.ts` (ajout de `search_keywords` dans le content)
+- **Script intermédiaire** : `scripts/mcp/reembed-mcp-chunks.ts` (re-embed uniquement les mcp-chunks, utile pour itérer)
+- **37 111 chunks re-embeddés** en ~8 min
+- **Coût** : ~$0.07
+
+### Incident : index ivfflat stale + limite mémoire free tier
+
+**Problème** : après avoir UPDATE 4764 chunks in-place avec les nouveaux embeddings, l'index ivfflat existant est devenu stale (les nouveaux vecteurs étaient dans de mauvais clusters). Un REINDEX a échoué car il nécessite 60 MB de RAM et le plan free de Supabase est limité à 32 MB.
+
+**Solution appliquée** : 
+1. `TRUNCATE mcp_chunks` — table vidée
+2. `CREATE INDEX` ivfflat sur table vide — instantané, 0 RAM
+3. Re-insertion des 37k chunks via script (chaque insert rejoint un cluster existant, sans rebuild)
+
+**Leçon** : sur free tier, **ne pas UPDATE en masse une colonne vector indexée**. Toujours DELETE + INSERT pour forcer une insertion clean dans l'index existant.
+
+### Performance mesurée (prod Vercel)
+
+| Query | Top résultat | Temps |
+|-------|--------------|-------|
+| `gmail` | Gmail (0.70) · `gmail_send_message` | 7s cold, ~1-2s warm |
+| `slack notifications` | Slack (0.74) · `slack_list_scheduled_messages` | 7s cold |
+| `create stripe payment` | Stripe (0.81) · `retrieve_balance` | 2.5s |
+| `notion database` | notion (0.66) | 4s |
+
+---
 
 ## Ce qui a été fait
 
 ### Phase 1 : Base de données (100%)
 - pgvector activé sur Supabase
 - Tables créées : `mcps`, `mcp_tools`, `mcp_chunks`, `ai_usage_logs`, `deep_analysis_usage`
-- Index ivfflat pour la recherche vectorielle
+- Index ivfflat pour la recherche vectorielle + index trgm GIN sur `mcps.name`, `description`, `search_keywords`
+- Extension `pg_trgm` activée
 - RLS policies sur toutes les tables
-- Fonction SQL `search_mcps()` avec pondération hybride :
-  - **55% cosine similarity** (embeddings vectoriels)
-  - **30% keyword ratio** (mots discriminants de la query trouvés dans nom+description)
-  - **10% multi-match boost** (plusieurs chunks qui matchent = plus pertinent)
-  - **5% quality score** (popularité + vérifié)
+- Fonction SQL `search_mcps()` avec pondération hybride (cf. section "Changements 2026-04-20 (après-midi)" plus haut pour la formule à jour) :
+  - **40% cosine similarity** (embeddings vectoriels)
+  - **30% keyword ratio** (mots discriminants trouvés dans nom + description + search_keywords)
+  - **20% name match** (binaire : mot de la query présent dans le nom)
+  - **5% multi-match boost**
+  - **5% quality score**
+- Path `keyword_mcps` en UNION du path cosine (assure qu'un MCP dont le nom matche est trouvé même sans cosine fort)
 - Filtrage de stop words : mots génériques (the, and, for...) + verbes non-discriminants (send, get, create, search...) retirés avant le keyword matching
 
 ### Phase 2 : Ingestion des données (100%)
@@ -119,9 +205,10 @@ STRICT RULES:
 ## Ce qui ne marche pas / à améliorer
 
 - **Pas de traduction FR→EN des queries** : les queries en français cherchent directement dans les embeddings anglais (cross-lingue). Fonctionne raisonnablement mais ~10-15% de perte de précision.
-- **Enrichissement README non fait** : les MCPs avec descriptions pauvres sur Smithery n'ont pas été enrichis via leur README GitHub.
-- **Rate limiting en mémoire** : se réinitialise au redémarrage du serveur. Suffisant pour le MVP, à remplacer par Redis pour la prod.
+- **Enrichissement README non fait** : les MCPs avec descriptions pauvres n'ont pas été enrichis via leur README GitHub. Partiellement compensé depuis 2026-04-20 par `search_keywords` généré par LLM.
+- **Rate limiting en mémoire** : se réinitialise au redémarrage du serveur et à chaque cold start Vercel (serverless). Suffisant pour le MVP, à remplacer par Upstash Redis pour la prod si le traffic monte.
 - **Pricing incomplet** : seulement 107 MCPs ont un pricing vérifié. Les ~4600 restants sont marqués "free" par défaut (confiance low).
+- **Re-enrichissement manuel** : pour ré-enrichir les `search_keywords` (nouveaux MCPs ou amélioration du prompt), il faut DELETE les chunks puis re-run `generate-embeddings.ts` — l'UPDATE in-place casse l'index ivfflat sur free tier. Script dédié `reembed-mcp-chunks.ts` doit être évité si possible pour cette raison.
 
 ## Phases restantes
 
@@ -155,7 +242,8 @@ STRICT RULES:
 
 | Opération | Coût |
 |-----------|------|
-| Embedding initial (37K chunks) | ~$0.06 one-shot |
+| Embedding initial (37K chunks, text-embedding-3-small) | ~$0.07 one-shot |
+| Enrichissement LLM `search_keywords` (4764 MCPs, gpt-4.1-nano) | ~$0.50 one-shot |
 | Recherche (embedding query) | ~$0.00000004 /recherche |
 | Explication IA (par MCP ouvert) | ~$0.001 /appel |
 | Analyse approfondie (~30 MCPs évalués) | ~$0.003 /analyse |

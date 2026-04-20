@@ -95,8 +95,11 @@ Moteur de recherche sémantique pour les MCPs (Model Context Protocol servers). 
 ### Architecture
 
 - **Recherche** : embeddings multi-chunk (1 par outil + 1 global par MCP) → pgvector sur Supabase
-- **Ranking hybride** : 55% cosine similarity + 30% keyword ratio + 10% multi-match boost + 5% quality score
-  - Le keyword ratio extrait les mots discriminants (filtre stop words + verbes génériques) et mesure combien apparaissent dans nom+description du MCP
+- **Ranking hybride** : 40% cosine + 30% keyword ratio + 20% name match + 5% multi-match + 5% quality
+  - Path keyword en UNION du path cosine → un MCP dont le nom matche est inclus même si l'embedding cosine est faible (fixe le bug "gmail absent" des queries courtes)
+  - Keyword ratio : mots discriminants trouvés dans `name + description + search_keywords`
+  - Name match : bonus binaire (+20%) si la query apparaît littéralement dans le nom du MCP
+  - `search_keywords` : colonne cachée enrichie par LLM (synonymes, brands, cas d'usage) — boost la qualité de la recherche sémantique sans polluer l'UI
 - **Explication IA** : GPT-4.1 nano génère une explication quand on ouvre un MCP
 - **Analyse approfondie** : GPT-4.1 nano évalue chaque MCP **individuellement** (batches de 10 en parallèle), strict platform matching, cache sessionStorage 24h. 10/mois/user, login requis.
 - **Données enrichies** : GitHub stars (API GitHub), use count (Smithery), pricing vérifié par web search (107 MCPs, colonne `pricing_confidence`)
@@ -115,10 +118,13 @@ Moteur de recherche sémantique pour les MCPs (Model Context Protocol servers). 
 
 ```
 scripts/mcp/
-  scrape-smithery.ts       → scraping Smithery.ai (4764 MCPs)
-  generate-embeddings.ts   → génération embeddings (37K chunks)
+  scrape-smithery.ts            → scraping Smithery.ai (4764 MCPs)
+  generate-embeddings.ts        → génération embeddings (37K chunks) — inclut search_keywords dans le content des mcp-chunks
+  enrich-search-keywords.ts     → enrichit mcps.search_keywords via LLM (synonymes + brands + cas d'usage)
+  reembed-mcp-chunks.ts         → re-embed uniquement les mcp-chunks (à utiliser avec précaution : UPDATE in-place casse l'index ivfflat sur free tier)
+  recategorize.ts               → re-infère mcps.categories et mcps.tool_tags à partir des descriptions
 scripts/
-  fetch-github-stars.ts    → récupération stars GitHub pour tous les MCPs avec repo
+  fetch-github-stars.ts         → récupération stars GitHub pour tous les MCPs avec repo
 
 app/api/mcp/
   search/route.ts          → recherche vectorielle hybride (embeddings + keyword)
@@ -150,7 +156,7 @@ lib/
 
 ### Tables Supabase
 
-- `mcps` — 4 764 MCPs (nom, description, catégories, quality_score, source_url, repo_url, github_stars, use_count, pricing_type, pricing_note, pricing_confidence)
+- `mcps` — 4 764 MCPs (nom, description, categories, tool_tags, search_keywords, quality_score, source_url, repo_url, github_stars, use_count, pricing_type, pricing_note, pricing_confidence)
 - `mcp_tools` — 32 347 outils (nom, description, input_schema)
 - `mcp_chunks` — 37 011 embeddings vectoriels (VECTOR(1536), chunk_type, content)
 - `ai_usage_logs` — log de chaque appel IA (endpoint, modèle, tokens, coût)
