@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase'
 import { logAiUsage } from '@/lib/ai-usage'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
-const MONTHLY_LIMIT = 10
+const MONTHLY_LIMIT = 80
 
 export async function POST(request: Request) {
   try {
