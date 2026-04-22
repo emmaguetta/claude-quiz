@@ -70,6 +70,12 @@ const translations = {
       authCallbackError: 'La confirmation a échoué (le lien a peut-être été ouvert dans un autre navigateur). Connecte-toi avec ton email et mot de passe ci-dessous.',
       captchaRequired: 'Complète la vérification anti-robot.',
       captchaFailed: 'La vérification anti-robot a échoué. Réessaie.',
+      resendHint: 'Tu ne l’as pas reçu ? Vérifie tes spams.',
+      resend: "Renvoyer l'email",
+      resending: 'Envoi…',
+      resent: '✓ Email renvoyé',
+      resendCooldown: (s: number) => `Patiente ${s}s avant de réessayer`,
+      resendError: "Impossible de renvoyer l'email. Réessaie dans un instant.",
     },
     // Onboarding
     onboarding: {
@@ -454,6 +460,12 @@ const translations = {
       back: 'Back',
       captchaRequired: 'Please complete the anti-robot verification.',
       captchaFailed: 'Anti-robot verification failed. Please try again.',
+      resendHint: "Didn't get it? Check your spam folder.",
+      resend: 'Resend email',
+      resending: 'Sending…',
+      resent: '✓ Email resent',
+      resendCooldown: (s: number) => `Wait ${s}s before trying again`,
+      resendError: "Couldn't resend the email. Try again in a moment.",
     },
     onboarding: {
       welcome: 'Welcome',

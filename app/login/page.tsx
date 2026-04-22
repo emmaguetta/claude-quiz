@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
@@ -22,6 +22,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [checkEmail, setCheckEmail] = useState(false)
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [resending, setResending] = useState(false)
+  const [resent, setResent] = useState(false)
+  const [resendError, setResendError] = useState<string | null>(null)
+  const [cooldown, setCooldown] = useState(0)
   const turnstileRef = useRef<TurnstileInstance>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -95,7 +99,41 @@ export default function LoginPage() {
     })
   }
 
+  async function handleResend() {
+    if (cooldown > 0 || resending) return
+    setResending(true)
+    setResent(false)
+    setResendError(null)
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    })
+    setResending(false)
+    if (error) {
+      setResendError(t.login.resendError)
+    } else {
+      setResent(true)
+      setCooldown(60)
+    }
+  }
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const id = window.setTimeout(() => setCooldown(c => c - 1), 1000)
+    return () => window.clearTimeout(id)
+  }, [cooldown])
+
   if (checkEmail) {
+    const resendLabel = resending
+      ? t.login.resending
+      : resent && cooldown > 0
+      ? `${t.login.resent} · ${cooldown}s`
+      : cooldown > 0
+      ? t.login.resendCooldown(cooldown)
+      : t.login.resend
+    const resendDisabled = resending || cooldown > 0
+
     return (
       <main className="min-h-screen text-zinc-100 flex items-center justify-center px-4">
         <div className="absolute top-6 right-6">
@@ -107,6 +145,22 @@ export default function LoginPage() {
           <p className="text-zinc-400">
             {t.login.checkEmailMessage(email)}
           </p>
+
+          <div className="pt-2 space-y-3">
+            <p className="text-xs text-zinc-600">{t.login.resendHint}</p>
+            <Button
+              onClick={handleResend}
+              disabled={resendDisabled}
+              variant="outline"
+              className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-50"
+            >
+              {resendLabel}
+            </Button>
+            {resendError && (
+              <p className="text-xs text-red-400">{resendError}</p>
+            )}
+          </div>
+
           <button
             onClick={() => setCheckEmail(false)}
             className="text-sm text-zinc-500 hover:text-zinc-300 underline underline-offset-2"
