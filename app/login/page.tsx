@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/lib/supabase/client'
+import { authCallbackUrl } from '@/lib/site-url'
 import { useLocale } from '@/components/LocaleProvider'
 import { LocaleToggle } from '@/components/LocaleToggle'
 
@@ -63,7 +64,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        options: { emailRedirectTo: authCallbackUrl() },
       })
       if (error) {
         setError(error.message)
@@ -95,7 +96,7 @@ export default function LoginPage() {
   async function handleOAuth(provider: 'github' | 'google' | 'azure') {
     await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: authCallbackUrl() },
     })
   }
 
@@ -107,7 +108,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: authCallbackUrl() },
     })
     setResending(false)
     if (error) {

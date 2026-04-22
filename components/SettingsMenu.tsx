@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { useLocale } from '@/components/LocaleProvider'
 import { createClient } from '@/lib/supabase/client'
+import { authCallbackUrl } from '@/lib/site-url'
 import type { Profile } from '@/lib/supabase'
 
 export function SettingsMenu() {
@@ -58,7 +59,7 @@ export function SettingsMenu() {
   async function handleResetPassword() {
     if (!user?.email) return
     await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: authCallbackUrl(),
     })
     setResetSent(true)
     setTimeout(() => setResetSent(false), 5000)
