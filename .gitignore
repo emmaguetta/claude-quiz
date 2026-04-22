@@ -43,3 +43,8 @@ next-env.d.ts
 
 # Claude Code local memory / settings
 .claude/
+
+# Dashboard (local Streamlit tool)
+dashboard/.venv/
+dashboard/__pycache__/
+dashboard/*.pyc

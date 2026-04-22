@@ -6,7 +6,7 @@ import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
-async function getEmbedding(text: string): Promise<number[]> {
+async function getEmbedding(text: string, userId: string | null): Promise<number[]> {
   const res = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
     headers: {
@@ -28,7 +28,14 @@ async function getEmbedding(text: string): Promise<number[]> {
   // Log embedding usage
   const usage = data.usage
   if (usage) {
-    logAiUsage({ endpoint: '/api/mcp/search', model: 'text-embedding-3-small', inputTokens: usage.total_tokens || 0, outputTokens: 0 })
+    logAiUsage({
+      endpoint: '/api/mcp/search',
+      model: 'text-embedding-3-small',
+      inputTokens: usage.total_tokens || 0,
+      outputTokens: 0,
+      userId,
+      queryText: text,
+    })
   }
   return data.data[0].embedding
 }
@@ -65,7 +72,7 @@ export async function POST(request: Request) {
     }
 
     // Generate embedding for the query
-    const queryEmbedding = await getEmbedding(query.trim())
+    const queryEmbedding = await getEmbedding(query.trim(), user.id)
     const embeddingStr = `[${queryEmbedding.join(',')}]`
 
     // Call the RPC function

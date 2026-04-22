@@ -75,7 +75,7 @@ Explain what this MCP lets the user do in relation to their search.`,
     // Log usage
     const usage = data.usage
     if (usage) {
-      logAiUsage({ endpoint: '/api/mcp/explain', model: 'gpt-4.1-nano', inputTokens: usage.prompt_tokens || 0, outputTokens: usage.completion_tokens || 0 })
+      logAiUsage({ endpoint: '/api/mcp/explain', model: 'gpt-4.1-nano', inputTokens: usage.prompt_tokens || 0, outputTokens: usage.completion_tokens || 0, userId: user.id })
     }
 
     return NextResponse.json({ explanation })

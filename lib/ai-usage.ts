@@ -12,6 +12,8 @@ export async function logAiUsage(params: {
   model: string
   inputTokens: number
   outputTokens: number
+  userId?: string | null
+  queryText?: string | null
 }) {
   const pricing = PRICING[params.model] || { input: 0, output: 0 }
   const cost =
@@ -26,6 +28,8 @@ export async function logAiUsage(params: {
       input_tokens: params.inputTokens,
       output_tokens: params.outputTokens,
       cost_usd: cost,
+      user_id: params.userId ?? null,
+      query_text: params.queryText ?? null,
     })
   } catch {
     // Don't fail the request if logging fails

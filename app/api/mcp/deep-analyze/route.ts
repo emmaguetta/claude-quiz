@@ -151,6 +151,7 @@ Is this MCP relevant to the search query?`,
       model: 'gpt-4.1-nano',
       inputTokens: totalInputTokens,
       outputTokens: totalOutputTokens,
+      userId: user.id,
     })
 
     // Record usage for rate limiting
