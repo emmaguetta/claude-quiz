@@ -62,6 +62,7 @@ export type Profile = {
   activities: string[]
   usage_level: 'never' | 'sometimes' | 'often' | 'daily'
   goals: string[]
+  heard_about: string | null
   onboarded: boolean
   created_at: string
 }

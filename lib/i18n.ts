@@ -74,7 +74,7 @@ const translations = {
     // Onboarding
     onboarding: {
       welcome: 'Bienvenue',
-      step: (n: number) => `Étape ${n}/4`,
+      step: (n: number) => `Étape ${n}/5`,
       profile: {
         title: "Comment tu t'appelles ?",
         description: 'Pour personnaliser ton expérience.',
@@ -125,6 +125,22 @@ const translations = {
           data: { label: 'Analyse de données', description: 'Scripts, dashboards, reporting' },
           automation: { label: 'Automatiser des workflows', description: 'Tâches répétitives, intégrations' },
           research: { label: 'Recherche / exploration', description: 'Expérimentation, prototypage' },
+          other: { label: 'Autre' },
+        },
+      },
+      heardAbout: {
+        title: "Comment as-tu entendu parler de nous ?",
+        description: 'Cela nous aide à savoir ce qui fonctionne.',
+        options: {
+          google: { label: 'Recherche Google', description: 'Je cherchais des ressources sur Claude Code' },
+          friend: { label: 'Bouche-à-oreille', description: 'Un ami ou collègue me l’a recommandé' },
+          instagram_post: { label: 'Post Instagram', description: 'Vu sur Instagram' },
+          linkedin_post: { label: 'Post LinkedIn', description: 'Vu sur LinkedIn' },
+          outreach: { label: 'Vous m’avez contacté·e', description: 'J’ai reçu un message de votre part' },
+          twitter: { label: 'X / Twitter', description: 'Vu sur X (ex-Twitter)' },
+          youtube: { label: 'YouTube', description: 'Une vidéo ou un tuto' },
+          reddit: { label: 'Reddit', description: 'Un post ou un commentaire' },
+          product_hunt: { label: 'Product Hunt', description: 'Annuaire de produits' },
           other: { label: 'Autre' },
         },
       },
@@ -441,7 +457,7 @@ const translations = {
     },
     onboarding: {
       welcome: 'Welcome',
-      step: (n: number) => `Step ${n}/4`,
+      step: (n: number) => `Step ${n}/5`,
       profile: {
         title: "What's your name?",
         description: 'To personalize your experience.',
@@ -492,6 +508,22 @@ const translations = {
           data: { label: 'Data analysis', description: 'Scripts, dashboards, reporting' },
           automation: { label: 'Automate workflows', description: 'Repetitive tasks, integrations' },
           research: { label: 'Research / exploration', description: 'Experimentation, prototyping' },
+          other: { label: 'Other' },
+        },
+      },
+      heardAbout: {
+        title: 'How did you hear about us?',
+        description: 'Helps us understand what works.',
+        options: {
+          google: { label: 'Google search', description: 'I was looking for Claude Code resources' },
+          friend: { label: 'Word of mouth', description: 'A friend or colleague recommended it' },
+          instagram_post: { label: 'Instagram post', description: 'Saw it on Instagram' },
+          linkedin_post: { label: 'LinkedIn post', description: 'Saw it on LinkedIn' },
+          outreach: { label: 'You reached out to me', description: 'I got a message from your team' },
+          twitter: { label: 'X / Twitter', description: 'Saw it on X (Twitter)' },
+          youtube: { label: 'YouTube', description: 'A video or tutorial' },
+          reddit: { label: 'Reddit', description: 'A post or comment' },
+          product_hunt: { label: 'Product Hunt', description: 'Product directory' },
           other: { label: 'Other' },
         },
       },

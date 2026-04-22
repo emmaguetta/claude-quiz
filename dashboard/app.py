@@ -465,7 +465,7 @@ with tab_users:
     display_cols = [
         c for c in [
             "email", "first_name", "last_name", "company", "usage_level",
-            "activities", "goals", "onboarded", "created_at", "last_sign_in_at",
+            "activities", "goals", "heard_about", "onboarded", "created_at", "last_sign_in_at",
             "tentatives", "precision_%", "sessions", "deep_analyses",
         ] if c in merged.columns
     ]
@@ -505,6 +505,7 @@ with tab_users:
                     "usage_level": u_row.get("usage_level"),
                     "activities": _as_list(u_row.get("activities")),
                     "goals": _as_list(u_row.get("goals")),
+                    "heard_about": u_row.get("heard_about"),
                     "onboarded": bool(u_row.get("onboarded")) if pd.notna(u_row.get("onboarded")) else False,
                 })
 
@@ -641,6 +642,81 @@ with tab_personas:
             combo = pd.DataFrame(rows).groupby(["activité", "usage_level"]).size().reset_index(name="n")
             combo = combo.sort_values("n", ascending=False)
             st.dataframe(combo, use_container_width=True, height=300)
+
+    st.divider()
+    st.subheader("Acquisition — comment sont-ils arrivés ?")
+    st.caption(
+        "Répartition des réponses à la question « Comment avez-vous entendu parler de nous ? » "
+        "posée à la fin de l'onboarding. Permet d'identifier les canaux qui fonctionnent vraiment."
+    )
+    heard_about_labels = {
+        "google": "Recherche Google",
+        "friend": "Bouche-à-oreille",
+        "instagram_post": "Post Instagram",
+        "linkedin_post": "Post LinkedIn",
+        "outreach": "Outreach (on les a contactés)",
+        "twitter": "X / Twitter",
+        "youtube": "YouTube",
+        "reddit": "Reddit",
+        "product_hunt": "Product Hunt",
+        "other": "Autre",
+    }
+    if not profiles.empty and "heard_about" in profiles.columns:
+        answered = profiles.dropna(subset=["heard_about"])
+        total_h = len(answered)
+        if total_h:
+            c1, c2 = st.columns([1, 2])
+            c1.metric(
+                "Profils avec réponse",
+                total_h,
+                f"{round(100 * total_h / max(len(profiles), 1), 1)}% des onboardés",
+                help="Nombre de profils avec `heard_about` renseigné.",
+            )
+            counts = answered.heard_about.value_counts().sort_values(ascending=True)
+            ys = [heard_about_labels.get(k, k) for k in counts.index.tolist()]
+            xs = [int(v) for v in counts.values.tolist()]
+            labels = [f"{n} ({round(100*n/total_h,1)}%)" for n in xs]
+            fig = go.Figure(data=[go.Bar(
+                y=ys, x=xs, orientation="h", text=labels, textposition="outside",
+                marker_color="#9333ea", cliponaxis=False,
+            )])
+            fig.update_layout(
+                height=400, margin=dict(l=0, r=0, t=10, b=0),
+                xaxis=dict(title="users", range=[0, max(xs) * 1.2 if xs else 1]),
+                yaxis=dict(title=""),
+            )
+            with c2:
+                st.plotly_chart(fig, use_container_width=True)
+
+            st.markdown("**Acquisition × activité (qui vient d'où ?)**")
+            rows = []
+            for _, row in answered.iterrows():
+                for a in _as_list(row.get("activities")):
+                    rows.append({"canal": heard_about_labels.get(row["heard_about"], row["heard_about"]), "activité": a})
+            if rows:
+                cross = pd.DataFrame(rows).pivot_table(
+                    index="canal", columns="activité", aggfunc="size", fill_value=0,
+                )
+                z_values = [[int(v) for v in r] for r in cross.values.tolist()]
+                fig = go.Figure(data=[go.Heatmap(
+                    z=z_values,
+                    x=[str(c) for c in cross.columns.tolist()],
+                    y=[str(r) for r in cross.index.tolist()],
+                    colorscale="Purples",
+                    text=[[str(v) for v in r] for r in z_values],
+                    texttemplate="%{text}",
+                    hovertemplate="canal=%{y}<br>activité=%{x}<br>n=%{z}<extra></extra>",
+                )])
+                fig.update_layout(
+                    height=360, margin=dict(l=0, r=0, t=10, b=0),
+                    xaxis=dict(title="activité", side="bottom"),
+                    yaxis=dict(title="canal", autorange="reversed"),
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Aucune réponse `heard_about` pour le moment (colonne récente).")
+    else:
+        st.info("La colonne `heard_about` n'est pas encore disponible.")
 
 
 # ─── Quiz ────────────────────────────────────────────────────────────────────

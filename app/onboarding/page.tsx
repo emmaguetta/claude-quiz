@@ -23,7 +23,7 @@ function loadOnboardingState() {
   }
 }
 
-function saveOnboardingState(state: { step: number; firstName: string; lastName: string; displayName: string; linkedinUrl: string; company: string; activities: string[]; usageLevel: string[]; goals: string[] }) {
+function saveOnboardingState(state: { step: number; firstName: string; lastName: string; displayName: string; linkedinUrl: string; company: string; activities: string[]; usageLevel: string[]; goals: string[]; heardAbout: string[] }) {
   sessionStorage.setItem(ONBOARDING_STATE_KEY, JSON.stringify(state))
 }
 
@@ -47,6 +47,7 @@ export default function OnboardingPage() {
   const [activities, setActivities] = useState<string[]>(saved?.activities ?? [])
   const [usageLevel, setUsageLevel] = useState<string[]>(saved?.usageLevel ?? [])
   const [goals, setGoals] = useState<string[]>(saved?.goals ?? [])
+  const [heardAbout, setHeardAbout] = useState<string[]>(saved?.heardAbout ?? [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -54,11 +55,12 @@ export default function OnboardingPage() {
   const activitiesOptions = Object.entries(t.onboarding.activities.options).map(([value, label]) => ({ value, label: typeof label === 'string' ? label : '' }))
   const usageLevels = Object.entries(t.onboarding.usage.options).map(([value, opt]) => ({ value, label: opt.label, description: opt.description }))
   const goalsOptions = Object.entries(t.onboarding.goals.options).map(([value, opt]) => ({ value, label: typeof opt === 'string' ? opt : opt.label, description: typeof opt === 'string' ? undefined : 'description' in opt ? opt.description : undefined }))
+  const heardAboutOptions = Object.entries(t.onboarding.heardAbout.options).map(([value, opt]) => ({ value, label: opt.label, description: 'description' in opt ? opt.description : undefined }))
 
   // Persist state on every change
   useEffect(() => {
-    saveOnboardingState({ step, firstName, lastName, displayName, linkedinUrl, company, activities, usageLevel, goals })
-  }, [step, firstName, lastName, displayName, linkedinUrl, company, activities, usageLevel, goals])
+    saveOnboardingState({ step, firstName, lastName, displayName, linkedinUrl, company, activities, usageLevel, goals, heardAbout })
+  }, [step, firstName, lastName, displayName, linkedinUrl, company, activities, usageLevel, goals, heardAbout])
 
   function toggleActivity(v: string) {
     setActivities(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])
@@ -72,13 +74,19 @@ export default function OnboardingPage() {
     setGoals(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])
   }
 
+  function toggleHeardAbout(v: string) {
+    setHeardAbout([v]) // single select
+  }
+
   const canProceed = step === 0
     ? firstName.trim().length > 0 && lastName.trim().length > 0 && displayName.trim().length > 0 && company.trim().length > 0
     : step === 1
     ? activities.length > 0
     : step === 2
     ? usageLevel.length > 0
-    : goals.length > 0
+    : step === 3
+    ? goals.length > 0
+    : heardAbout.length > 0
 
   async function handleFinish() {
     setSaving(true)
@@ -93,6 +101,7 @@ export default function OnboardingPage() {
         activities,
         usage_level: usageLevel[0] as 'never' | 'sometimes' | 'often' | 'daily',
         goals,
+        heard_about: heardAbout[0],
       })
 
       // Save pre-selected filters to localStorage
@@ -108,7 +117,7 @@ export default function OnboardingPage() {
     }
   }
 
-  const progress = ((step + 1) / 4) * 100
+  const progress = ((step + 1) / 5) * 100
 
   return (
     <main className="min-h-screen text-zinc-100 flex items-center justify-center px-4">
@@ -237,6 +246,17 @@ export default function OnboardingPage() {
           />
         )}
 
+        {step === 4 && (
+          <OnboardingStep
+            title={t.onboarding.heardAbout.title}
+            description={t.onboarding.heardAbout.description}
+            options={heardAboutOptions}
+            selected={heardAbout}
+            multiSelect={false}
+            onToggle={toggleHeardAbout}
+          />
+        )}
+
         {error && (
           <p className="text-sm text-red-400">{error}</p>
         )}
@@ -254,7 +274,7 @@ export default function OnboardingPage() {
             <div />
           )}
 
-          {step < 3 ? (
+          {step < 4 ? (
             <Button
               onClick={() => setStep(step + 1)}
               disabled={!canProceed}

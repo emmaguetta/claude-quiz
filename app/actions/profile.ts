@@ -14,6 +14,7 @@ type OnboardingData = {
   activities: string[]
   usage_level: 'never' | 'sometimes' | 'often' | 'daily'
   goals: string[]
+  heard_about: string
 }
 
 export type PreselectedFilters = {
@@ -38,6 +39,7 @@ export async function saveProfile(data: OnboardingData): Promise<PreselectedFilt
     activities: data.activities,
     usage_level: data.usage_level,
     goals: data.goals,
+    heard_about: data.heard_about,
     onboarded: true,
   })
 
