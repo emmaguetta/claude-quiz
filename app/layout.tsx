@@ -13,7 +13,7 @@ import { ConsentBanner } from "@/components/ConsentBanner";
 import type { Locale } from "@/lib/i18n";
 import "./globals.css";
 
-const gaId = process.env.NEXT_PUBLIC_GA_ID;
+const gaId = process.env.NEXT_PUBLIC_GA_ID?.trim();
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
