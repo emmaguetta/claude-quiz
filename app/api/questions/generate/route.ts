@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase'
 import { generateQuestionsFromDocs } from '@/lib/generate'
+import { pingIndexNow } from '@/lib/indexnow'
 
 export const maxDuration = 300
 
@@ -34,5 +35,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ inserted: data?.length ?? 0 })
+  const inserted = data?.length ?? 0
+  let indexnow: Awaited<ReturnType<typeof pingIndexNow>> | null = null
+  if (inserted > 0) {
+    indexnow = await pingIndexNow([
+      'https://claudequiz.app/',
+      'https://claudequiz.app/faq',
+    ])
+  }
+
+  return NextResponse.json({ inserted, indexnow })
 }

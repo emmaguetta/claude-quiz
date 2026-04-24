@@ -53,7 +53,9 @@
 | `app/robots.ts` | Statique | Directives par user-agent (voir section GEO) |
 | `app/manifest.ts` | Statique | Web App Manifest (PWA-ready) |
 | `app/opengraph-image.tsx` | Dynamique (Edge) | Image 1200x630 avec titre + stats |
-| `app/icon.svg` | Statique | Favicon "Q" violet dégradé |
+| `app/icon.svg` | Statique | Favicon "Q" blanc sur cercle noir (optimisé 16 px pour Google) |
+| `app/favicon.ico` | Statique | Favicon multi-résolutions 16/32/48/64 px — régénéré depuis le SVG via `scripts/gen-favicon.mjs` |
+| `public/4bbf557176d232ce91df947ea95cfbe9.txt` | Statique | Clé de vérification IndexNow (utilisée par `lib/indexnow.ts` pour pinger Bing/Yandex) |
 
 ### Structured Data (JSON-LD)
 
@@ -161,6 +163,54 @@ Footer ajouté dans le root layout (`app/layout.tsx`), visible sur toutes les pa
 En bas : copyright + mention "Non affilié à Anthropic".
 
 > **À quoi ça sert** : Le footer contribue au SEO de plusieurs façons. D'abord le maillage interne : chaque page du site contient maintenant des liens vers `/quiz`, `/mcp-search` et `/faq`, ce qui renforce leur "jus de liens" aux yeux de Google. Ensuite les liens sortants vers les docs officielles (Anthropic, MCP Protocol) signalent la pertinence thématique. Enfin, les crawlers IA parcourent les liens du footer pour découvrir toutes les pages du site — c'est un filet de sécurité si le sitemap ne suffit pas.
+
+---
+
+## Mesure & outils
+
+> **Qu'est-ce qu'on observe** : Sans mesure, aucune optimisation SEO/GEO n'est pilotable. Cette section liste les outils configurés pour observer l'audience, le référencement et les citations IA.
+
+### Google Search Console (GSC)
+
+Propriété vérifiée : **Domaine** `claudequiz.app` (TXT DNS via Vercel). Sitemap soumis : `https://claudequiz.app/sitemap.xml`.
+
+Ce qu'on regarde :
+- **Performance** — requêtes, impressions, clics, CTR, position moyenne
+- **Pages** — statut d'indexation de chaque URL
+- **Enhancements** — validité FAQ rich results, mobile-friendly
+- **Core Web Vitals** — LCP, INP, CLS
+
+### Bing Webmaster Tools
+
+Propriété importée depuis GSC (vérification partagée). Sitemap soumis. Fonctionnalités utiles :
+- **AI Performance** (BETA) — citations dans Microsoft Copilot (équivalent de nos rapports GEO pour l'écosystème Microsoft)
+- **Site Scan** — audit technique on-demand
+
+### Google Analytics 4 (GA4)
+
+Propriété `Claude Quiz` — Measurement ID `G-CNXDPC84V5`. Intégration via `@next/third-parties` avec **Google Consent Mode v2** :
+- Par défaut `denied` (conforme RGPD)
+- Bannière `components/ConsentBanner.tsx` permet d'accepter ou refuser
+- Choix mémorisé via `localStorage` (clé `claude-quiz-analytics-consent`)
+
+Events custom disponibles dans `lib/analytics.ts` :
+- `quiz_completed` (correct, total, duration_sec)
+- `mcp_search` (query, results_count)
+- `mcp_explain` (mcp_name)
+- `faq_question_opened` (question)
+
+### Association GSC ↔ GA4
+
+Liée via Admin → Product links dans GA4. Permet de voir dans GA4 les rapports **Search Console** (requêtes Google organiques, landing pages). Données disponibles 24-48h après l'association.
+
+### IndexNow (Bing / Yandex / DuckDuckGo)
+
+Ping instantané aux moteurs de recherche à chaque nouvelle question ajoutée (cron hebdomadaire). Implémentation :
+- `public/4bbf557176d232ce91df947ea95cfbe9.txt` — fichier de vérification
+- `lib/indexnow.ts` — helper `pingIndexNow(urls)`
+- Appelé depuis `app/api/questions/generate/route.ts` après `INSERT` réussi (ping `/` et `/faq`)
+
+> **À quoi ça sert** : Sans IndexNow, Bing peut mettre plusieurs jours à re-crawler. Avec IndexNow, le ping est instantané — la nouvelle question est découvrable par Copilot dès l'insertion.
 
 ---
 
