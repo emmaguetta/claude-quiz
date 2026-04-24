@@ -1,15 +1,44 @@
 # Plan d'action SEO/GEO — claudequiz.app
 
-> Plan d'exécution pour la prochaine session. L'état actuel (ce qui est déjà en place) est documenté dans [`SEO-GEO.md`](./SEO-GEO.md).
-> **Point de départ** : aucun outil de mesure installé. On ne sait donc pas aujourd'hui combien de visiteurs arrivent, sur quelles requêtes, ni si Google indexe bien le site.
+> Plan d'exécution. L'état actuel (ce qui est déjà en place) est documenté dans [`SEO-GEO.md`](./SEO-GEO.md).
 
 ---
 
-## Objectifs
+## État d'avancement
 
-1. **Mesurer** ce qui se passe (sans ça, on optimise à l'aveugle)
-2. **Vérifier** que tout ce qui est déjà codé fonctionne réellement en production
-3. **Améliorer** sur la base des données réelles (pas des paris)
+**Session du 2026-04-24** ✅ — toute la Phase 1 (mesure) + audit Phase 2 + une partie des quick wins sont terminés.
+
+| Phase | Statut | Détails |
+|---|---|---|
+| **Phase 1 — Mesure** | ✅ Fait | GSC vérifiée, Bing importée, GA4 + Consent Mode v2 + bannière RGPD déployés, IndexNow actif, association GSC↔GA4 OK |
+| **Phase 2 — Audit** | ⚠️ Fait mais bloqueur critique identifié | **`/quiz` et `/mcp-search` redirigent 307 vers `/login` pour tous les bots → PAS INDEXÉES** → attaqué en Phase 3.2 |
+| **Phase 3 — Améliorations** | ⏳ À faire | Priorité absolue : Phase 3.2 (landings publiques). Prévu week-end. |
+
+## Ce qu'il reste — priorité du week-end
+
+🎯 **Phase 3.2 (landings publiques)** est le seul vrai levier SEO/GEO restant. Tout ce qu'on a fait aujourd'hui est de la **mesure**, qui ne fait pas progresser le ranking. Les landings débloquent l'indexation de 2 pages clés + permettent de cibler 50-100 nouveaux keywords.
+
+**Prochaine session — ordre d'attaque** :
+1. Créer `app/quiz/page.tsx` = landing publique (hero, démo, 1-2 questions d'exemple, screenshots, CTA `/login`) → voir § Phase 3.2 plus bas
+2. Créer `app/mcp-search/page.tsx` = landing publique (hero, valeur, recherche d'exemple)
+3. Déplacer l'app quiz vers `app/quiz/play/page.tsx`, app MCP vers `app/mcp-search/app/page.tsx`
+4. Ajouter `/quiz` et `/mcp-search` à `PUBLIC_PATHS` dans `proxy.ts`
+5. Déplacer Quiz schema / WebApplication schema vers les landings
+6. Vérifier que les liens Footer + Home qui pointent vers `/quiz` et `/mcp-search` continuent de marcher
+
+**Effort estimé** : 3-4h pour 2 landings minimalistes. Les checklists détaillées sont dans la section Phase 3.2.
+
+**À faire AVANT la session week-end** :
+- Regarder dans GSC → Performance : quelles requêtes ressortent déjà (même avec 0 data, juste checker l'UI pour être familière)
+- Réfléchir aux 3-5 screenshots / visuels qu'on voudra mettre sur chaque landing
+
+---
+
+## Objectifs initiaux
+
+1. **Mesurer** ce qui se passe (sans ça, on optimise à l'aveugle) → ✅ Fait
+2. **Vérifier** que tout ce qui est déjà codé fonctionne réellement en production → ✅ Fait
+3. **Améliorer** sur la base des données réelles (pas des paris) → ⏳ En cours (Phase 3.2 = gros levier)
 
 ---
 
@@ -33,9 +62,9 @@
 6. Soumettre le sitemap : Sitemaps → `https://claudequiz.app/sitemap.xml`
 
 **Livrables** :
-- [ ] Propriété GSC vérifiée
-- [ ] Sitemap soumis
-- [ ] Screenshot du statut "Success"
+- [x] Propriété GSC vérifiée (TXT DNS `google-site-verification=b56i8gRXe_zHBXQRhQ0-u8Ux-HHAmYX8z9JhouiTUNU`, ajouté via `vercel dns add`)
+- [x] Sitemap soumis
+- [x] Données en cours de collecte (7-14 jours avant les premiers chiffres utiles)
 
 **Ce qu'on regardera ensuite (après 7–14 jours de data)** :
 - Onglet **Performance** : top queries, top pages, pays, devices
@@ -72,11 +101,12 @@
 - Events à tracker : `quiz_completed`, `mcp_search`, `mcp_deep_analyze`, `faq_question_clicked` ?
 
 **Livrables** :
-- [ ] Propriété GA4 créée
-- [ ] `NEXT_PUBLIC_GA_ID` ajoutée aux env vars Vercel
-- [ ] Script intégré dans le layout
-- [ ] Déploiement vérifié (Realtime affiche des visites)
-- [ ] Décision RGPD prise
+- [x] Propriété GA4 créée — Measurement ID `G-CNXDPC84V5`
+- [x] `NEXT_PUBLIC_GA_ID` ajoutée aux env vars Vercel (⚠️ piège : `echo "xxx" | vercel env add` ajoute un `\n` — utiliser `printf` ou mettre `.trim()` en défensif côté code)
+- [x] Script intégré dans `app/layout.tsx` via `@next/third-parties`
+- [x] Déploiement vérifié — Temps Réel affiche des visiteurs
+- [x] Décision RGPD prise : **Consent Mode v2** + bannière custom `components/ConsentBanner.tsx` (défaut `denied`, ping `granted` après clic Accepter)
+- [x] Association GSC ↔ GA4 faite (Admin → Product links → Search Console)
 
 ---
 
@@ -91,8 +121,8 @@
 4. Soumettre le sitemap
 
 **Livrables** :
-- [ ] Propriété Bing vérifiée
-- [ ] Sitemap soumis
+- [x] Propriété Bing vérifiée (import depuis GSC)
+- [x] Sitemap soumis
 
 ---
 
@@ -106,8 +136,9 @@
 3. Ajouter une route API `/api/indexnow` qui ping l'endpoint IndexNow quand une question est ajoutée (hook dans le cron hebdomadaire)
 
 **Livrables** :
-- [ ] Clé générée et servie
-- [ ] Intégrée dans le cron `/api/questions/generate`
+- [x] Clé générée : `4bbf557176d232ce91df947ea95cfbe9` (servie à `/4bbf557176d232ce91df947ea95cfbe9.txt`)
+- [x] Whitelist dans `proxy.ts` (pattern `/^\/[a-f0-9]{32}\.txt$/`)
+- [x] Helper `lib/indexnow.ts` + appel dans `app/api/questions/generate/route.ts` après `INSERT` réussi (ping `/` et `/faq`)
 
 ---
 
@@ -190,7 +221,7 @@ Tester manuellement si les grandes IA citent le site sur des requêtes cibles :
 
 ### 3.1 Quick wins (< 1h chacun)
 
-- [ ] **Mettre à jour `SEO-GEO.md` ligne 56** : le favicon n'est plus "Q violet dégradé" mais "Q blanc sur cercle noir"
+- [x] **Drift doc favicon** corrigé dans `SEO-GEO.md` (Q blanc sur cercle noir)
 - [ ] **`dateModified` dynamique** dans les metadata : basé sur la dernière question ajoutée en DB (améliore la fraîcheur perçue)
 - [ ] **OG images dynamiques par page** : `/quiz/opengraph-image.tsx`, `/mcp-search/opengraph-image.tsx`, `/faq/opengraph-image.tsx` (actuellement tout partage la même image)
 - [ ] **Flux RSS `/feed.xml`** : liste des nouvelles questions (source d'autorité pour les IA, signal de fraîcheur)
@@ -251,23 +282,15 @@ Dashboard hebdomadaire à mettre en place :
 
 ---
 
-## Ordre d'exécution proposé pour demain
+## Décisions prises (session 2026-04-24)
 
-1. **GSC** (15 min) — le plus critique, démarrer la collecte ASAP
-2. **Bing Webmaster** (5 min) — import GSC
-3. **Audit Phase 2** (20 min) — pendant que GSC commence à collecter
-4. **GA4** (20 min) — après avoir tranché la question RGPD
-5. **IndexNow** (10 min) — petit bonus
-6. **Mettre à jour `SEO-GEO.md`** avec la drift favicon
+1. **RGPD/cookies** → Consent Mode v2 + bannière custom simple (code dans `components/ConsentBanner.tsx`)
+2. **GA4 events custom** → `quiz_completed`, `mcp_search`, `mcp_explain`, `faq_question_opened` (helpers dans `lib/analytics.ts`, pas encore câblés dans les composants concernés — à faire quand on touchera à ces features)
+3. **Priorité Phase 3** → Phase 3.2 d'abord (landings publiques) car c'est le blocage critique. Les pages piliers/glossaire/comparaisons viendront ensuite.
+4. **Association GSC↔GA4** → faite malgré un ROI limité à court terme, pour simplifier l'analyse plus tard.
 
-Total ciblé : **~1h15** pour avoir toute l'infra de mesure en place et un rapport d'audit.
+## À regarder dans ~7-14 jours (quand GSC aura assez de data)
 
-Les Phase 3 et 4 se traiteront sur les semaines suivantes, **après avoir des données réelles**.
-
----
-
-## Questions à trancher avant de commencer
-
-1. **RGPD/cookies** : bannière de consentement complète (Axeptio, Didomi gratuits) OU Consent Mode v2 basique OU pas de GA4 avant d'avoir statué ?
-2. **GA4 events** : quels events custom on track dès le début ? (ma suggestion : `quiz_completed`, `mcp_search`, `mcp_deep_analyze`)
-3. **Priorité Phase 3** : pages piliers OU pages MCP individuelles OU glossaire ?
+- Requêtes sur lesquelles on apparaît déjà (même en page 2-3) → prioriser celles-ci pour les landings
+- Pages qui reçoivent déjà du trafic → renforcer le maillage
+- Erreurs d'indexation (Pages → Non indexed) → fixer ce qui l'est par accident
