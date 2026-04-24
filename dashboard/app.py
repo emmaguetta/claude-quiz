@@ -767,6 +767,33 @@ with tab_quiz:
         c5.metric("Précision moy. session", f"{avg_session_acc}%")
 
     st.divider()
+    st.subheader("Questions répondues par jour")
+    st.caption(
+        "Chaque colonne = nombre de lignes dans `quiz_attempts` ce jour-là (1 ligne = 1 réponse à une question). "
+        "Les jours sans réponse sont affichés à 0."
+    )
+    daily_attempts = _daily_counts(attempts, "answered_at", "questions")
+    if daily_attempts.empty:
+        st.info("Aucune réponse enregistrée.")
+    else:
+        days = daily_attempts["day"].astype(str).tolist()
+        values = [int(v) for v in daily_attempts["questions"].tolist()]
+        fig = go.Figure(data=[go.Bar(
+            x=days, y=values,
+            text=[str(v) for v in values],
+            textposition="outside",
+            marker_color="#1f77b4",
+            cliponaxis=False,
+        )])
+        fig.update_layout(
+            height=360, margin=dict(l=0, r=0, t=10, b=0),
+            xaxis=dict(type="category", title="date"),
+            yaxis=dict(title="questions répondues"),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption(f"Total : **{sum(values)}** questions sur **{len(values)}** jours · moyenne **{round(sum(values) / max(len(values), 1), 1)}/jour**")
+
+    st.divider()
     st.subheader("Filtres les plus utilisés (déduits par session)")
     st.caption(
         "Un filtre est déduit si toutes les questions d'une session partagent la même valeur "
