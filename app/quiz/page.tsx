@@ -73,6 +73,27 @@ function addHiScore(entry: HiScore): HiScore[] {
   return top
 }
 
+function formatHiScoreDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+async function fetchServerHiScores(): Promise<HiScore[] | null> {
+  try {
+    const res = await fetch('/api/hi-scores', { cache: 'no-store' })
+    if (!res.ok) return null
+    const rows: { correct: number; total: number; categories: string[]; difficulties: string[]; finished_at: string }[] = await res.json()
+    return rows.map(r => ({
+      correct: r.correct,
+      total: r.total,
+      categories: r.categories ?? [],
+      difficulties: r.difficulties ?? [],
+      date: formatHiScoreDate(r.finished_at),
+    }))
+  } catch {
+    return null
+  }
+}
+
 type RecapData = {
   score: { correct: number; total: number }
   filters: { categories: string[]; difficulties: string[]; developer: DeveloperFilter }
@@ -217,6 +238,7 @@ export default function QuizPage() {
   // Initial mount
   useEffect(() => {
     const savedFilters = loadFilters()
+    // Seed from localStorage for logged-out users; overwritten by API fetch below when user is signed in.
     setHiScores(loadHiScores())
     setCategories(savedFilters.categories)
     setDifficulties(savedFilters.difficulties)
@@ -256,6 +278,19 @@ export default function QuizPage() {
       .then(setCounts)
       .catch(() => {})
   }, [fetchQuestion, locale])
+
+  // Sync hi-scores from server whenever the authenticated user changes.
+  // Logged-out users keep seeing their localStorage scores.
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    void fetchServerHiScores().then(remote => {
+      if (!cancelled && remote) setHiScores(remote)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   async function handleSelect(idx: number) {
     if (selectedIdx !== null || !question || session.total >= TARGET) return
@@ -314,14 +349,21 @@ export default function QuizPage() {
 
       // Save hi-score when session reaches exactly TARGET
       if (next.total === TARGET) {
+        const played = [...sessionHistory, { question: fullQuestion, selectedIdx: idx }].map(h => h.question)
         const entry: HiScore = {
           correct: next.correct,
           total: next.total,
-          categories,
-          difficulties,
+          categories: Array.from(new Set(played.map(q => q.category))),
+          difficulties: Array.from(new Set(played.map(q => q.difficulty))),
           date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
         }
         setHiScores(addHiScore(entry))
+        // For logged-in users, the DB already has all 10 attempts — pull the authoritative list back.
+        if (user) {
+          void fetchServerHiScores().then(remote => {
+            if (remote) setHiScores(remote)
+          })
+        }
       }
     } catch {
       setError(t.quiz.unknownError)

@@ -22,15 +22,16 @@ const TAB_COLORS: Record<Tab, string> = {
 
 const RANK_COLOR = 'text-zinc-500'
 
-const MAX_DISPLAY = 10
+const MAX_DISPLAY = 5
 
 export function HiScores({ scores }: { scores: HiScore[] }) {
   const { t } = useLocale()
   const [tab, setTab] = useState<Tab>('easy')
 
-  // Filter scores that include the selected difficulty
+  // Filter scores that include the selected difficulty.
+  // Legacy scores saved without difficulty tracking (empty array) are shown in every tab.
   const filtered = scores
-    .filter(s => s.difficulties.includes(tab))
+    .filter(s => s.difficulties.length === 0 || s.difficulties.includes(tab))
     .slice(0, MAX_DISPLAY)
 
   return (
@@ -79,7 +80,7 @@ export function HiScores({ scores }: { scores: HiScore[] }) {
             return (
               <div
                 key={i}
-                className="flex items-center gap-4 px-4 py-3 rounded text-sm border border-zinc-800/60 bg-zinc-900/40 transition-colors"
+                className="flex items-center gap-3 sm:gap-4 px-4 py-3 rounded text-sm border border-zinc-800/60 bg-zinc-900/40 transition-colors"
               >
                 {/* Rank */}
                 <span className={`w-8 font-bold shrink-0 ${RANK_COLOR}`}>
@@ -96,8 +97,20 @@ export function HiScores({ scores }: { scores: HiScore[] }) {
                   {pct}%
                 </span>
 
-                {/* Spacer */}
-                <div className="flex-1" />
+                {/* Categories (empty for legacy scores) */}
+                <div className="flex flex-wrap gap-1 min-w-0 flex-1 justify-end sm:justify-start">
+                  {s.categories.slice(0, 4).map((cat) => (
+                    <span
+                      key={cat}
+                      className="rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400 whitespace-nowrap"
+                    >
+                      {t.card.categories[cat] ?? cat}
+                    </span>
+                  ))}
+                  {s.categories.length > 4 && (
+                    <span className="text-[10px] text-zinc-600 self-center">+{s.categories.length - 4}</span>
+                  )}
+                </div>
 
                 {/* Date */}
                 <span className="text-xs text-zinc-600 tabular-nums whitespace-nowrap shrink-0">
