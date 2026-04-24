@@ -13,7 +13,8 @@ export async function proxy(request: NextRequest) {
     pathname === '/sitemap.xml' ||
     pathname === '/robots.txt' ||
     pathname === '/manifest.webmanifest' ||
-    pathname.startsWith('/opengraph-image')
+    pathname.startsWith('/opengraph-image') ||
+    /^\/[a-f0-9]{32}\.txt$/.test(pathname)  // IndexNow key file
   ) {
     return NextResponse.next()
   }
