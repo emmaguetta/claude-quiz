@@ -43,7 +43,17 @@ export function McpSearchClient({ initialCategoryGroups, initialTools, initialTo
   const [browseTotal, setBrowseTotal] = useState(0)
   const [selectedMcp, setSelectedMcp] = useState<McpResult | null>(null)
   const [lastQuery, setLastQuery] = useState(initialQuery)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const modeRef = useRef<'search' | 'browse'>(initialQuery ? 'search' : 'browse')
+
+  useEffect(() => {
+    if (!mobileFiltersOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mobileFiltersOpen])
 
   const syncUrl = useCallback(
     (mode: 'search' | 'browse', query: string, category: string | null, tool: string | null, sortKey: SortKey) => {
@@ -115,6 +125,7 @@ export function McpSearchClient({ initialCategoryGroups, initialTools, initialTo
   const handleCategoryChange = useCallback(
     (cat: string | null) => {
       setSelectedCategory(cat)
+      setMobileFiltersOpen(false)
       handleBrowse(cat, selectedTool, sort)
     },
     [selectedTool, sort, handleBrowse]
@@ -123,6 +134,7 @@ export function McpSearchClient({ initialCategoryGroups, initialTools, initialTo
   const handleToolChange = useCallback(
     (tool: string | null) => {
       setSelectedTool(tool)
+      setMobileFiltersOpen(false)
       handleBrowse(selectedCategory, tool, sort)
     },
     [selectedCategory, sort, handleBrowse]
@@ -148,8 +160,11 @@ export function McpSearchClient({ initialCategoryGroups, initialTools, initialTo
   const handleClearAllFilters = useCallback(() => {
     setSelectedCategory(null)
     setSelectedTool(null)
+    setMobileFiltersOpen(false)
     handleBrowse(null, null, sort)
   }, [handleBrowse, sort])
+
+  const activeFilterCount = (selectedCategory ? 1 : 0) + (selectedTool ? 1 : 0)
 
   useEffect(() => {
     if (initialQuery) {
@@ -219,12 +234,29 @@ export function McpSearchClient({ initialCategoryGroups, initialTools, initialTo
 
           <div className="flex-1 min-w-0">
             {isBrowse && !loading && (
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-900">
-                <p className="text-sm text-zinc-400">
+              <div className="mb-4 pb-3 border-b border-zinc-900 space-y-2 md:space-y-0 md:flex md:items-center md:gap-3">
+                <p className="text-sm text-zinc-400 min-w-0 md:flex-1 truncate">
                   <span className="text-zinc-200 font-medium">{activeFilterLabel}</span>
                   <span className="text-zinc-600"> · {browseTotal} MCPs</span>
                 </p>
-                <McpSortSelect value={sort} onChange={handleSortChange} />
+                <div className="flex items-center justify-between gap-3 md:justify-end">
+                  {categoryGroups.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setMobileFiltersOpen(true)}
+                      className="md:hidden shrink-0 inline-flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-300 hover:border-zinc-600 hover:text-zinc-100 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54z"/></svg>
+                      <span>{t.mcpSearch.filterByCategory}</span>
+                      {activeFilterCount > 0 && (
+                        <span className="ml-0.5 rounded bg-zinc-700 text-zinc-100 text-[10px] px-1.5 py-0.5 tabular-nums">{activeFilterCount}</span>
+                      )}
+                    </button>
+                  )}
+                  <div className="shrink-0">
+                    <McpSortSelect value={sort} onChange={handleSortChange} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -249,6 +281,40 @@ export function McpSearchClient({ initialCategoryGroups, initialTools, initialTo
       </div>
 
       <McpDetailSheet mcp={selectedMcp} query={lastQuery} onClose={() => setSelectedMcp(null)} />
+
+      {mobileFiltersOpen && categoryGroups.length > 0 && (
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true">
+          <div
+            className="absolute inset-0 bg-black/70"
+            onClick={() => setMobileFiltersOpen(false)}
+          />
+          <div className="absolute inset-y-0 right-0 w-[88%] max-w-sm bg-zinc-950 border-l border-zinc-800 flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-900 shrink-0">
+              <p className="text-sm font-medium text-zinc-200">{t.mcpSearch.filterByCategory}</p>
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors"
+                aria-label="Close"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto py-4 px-1">
+              <McpCategoryFilters
+                groups={categoryGroups}
+                tools={tools}
+                selectedCategory={selectedCategory}
+                selectedTool={selectedTool}
+                onCategoryChange={handleCategoryChange}
+                onToolChange={handleToolChange}
+                onClearAll={handleClearAllFilters}
+                total={totalMcps}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
