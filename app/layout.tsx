@@ -1,14 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
+import Script from "next/script";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { AuthProvider } from "@/components/AuthProvider";
 import { LocaleProvider } from "@/components/LocaleProvider";
 import { SettingsMenu } from "@/components/SettingsMenu";
 import { DisplayNamePrompt } from "@/components/DisplayNamePrompt";
 import { JsonLd } from "@/components/JsonLd";
 import { Footer } from "@/components/Footer";
+import { ConsentBanner } from "@/components/ConsentBanner";
 import type { Locale } from "@/lib/i18n";
 import "./globals.css";
+
+const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -82,6 +87,25 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preload" href="https://fonts.googleapis.com/css2?family=Jersey+10&family=Bitcount+Single+Ink&display=block" as="style" />
         <link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=Bitcount+Single+Ink&display=block" rel="stylesheet" />
+        {gaId && (
+          <Script id="gtag-consent-default" strategy="beforeInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              window.gtag = gtag;
+              var stored = null;
+              try { stored = localStorage.getItem('claude-quiz-analytics-consent'); } catch(e) {}
+              var granted = stored === 'granted';
+              gtag('consent', 'default', {
+                ad_storage: granted ? 'granted' : 'denied',
+                ad_user_data: granted ? 'granted' : 'denied',
+                ad_personalization: granted ? 'granted' : 'denied',
+                analytics_storage: granted ? 'granted' : 'denied',
+                wait_for_update: 500,
+              });
+            `}
+          </Script>
+        )}
       </head>
       <body className="min-h-full flex flex-col" style={{ backgroundColor: '#1e1e1e' }}>
         <JsonLd data={{
@@ -117,7 +141,9 @@ export default async function RootLayout({
             <DisplayNamePrompt />
           </AuthProvider>
           <Footer />
+          <ConsentBanner />
         </LocaleProvider>
+        {gaId && <GoogleAnalytics gaId={gaId} />}
       </body>
     </html>
   );
