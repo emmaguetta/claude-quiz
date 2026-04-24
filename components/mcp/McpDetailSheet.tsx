@@ -27,6 +27,25 @@ export function McpDetailSheet({ mcp, query, onClose }: Props) {
   const [explanation, setExplanation] = useState('')
   const [explaining, setExplaining] = useState(false)
 
+  // Track detail view (fire-and-forget)
+  useEffect(() => {
+    if (!mcp) return
+    fetch('/api/mcp/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'detail_viewed',
+        payload: {
+          mcp_id: mcp.id,
+          mcp_slug: mcp.slug,
+          mcp_name: mcp.name,
+          categories: mcp.categories,
+          source_query: query || null,
+        },
+      }),
+    }).catch(() => {})
+  }, [mcp, query])
+
   // Load tools
   useEffect(() => {
     if (!mcp) { setTools([]); setExplanation(''); return }
@@ -68,6 +87,23 @@ export function McpDetailSheet({ mcp, query, onClose }: Props) {
 
   const githubUrl = mcp.repoUrl
   const siteUrl = mcp.sourceUrl && mcp.sourceUrl !== mcp.repoUrl ? mcp.sourceUrl : null
+
+  const trackExternalClick = (target: 'site' | 'github', url: string) => {
+    fetch('/api/mcp/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'external_click',
+        payload: {
+          mcp_id: mcp.id,
+          mcp_slug: mcp.slug,
+          mcp_name: mcp.name,
+          target,
+          url,
+        },
+      }),
+    }).catch(() => {})
+  }
 
   return (
     <>
@@ -155,6 +191,7 @@ export function McpDetailSheet({ mcp, query, onClose }: Props) {
                 href={siteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackExternalClick('site', siteUrl)}
                 className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors border border-zinc-800 rounded-lg px-3 py-1.5"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -166,6 +203,7 @@ export function McpDetailSheet({ mcp, query, onClose }: Props) {
                 href={githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackExternalClick('github', githubUrl)}
                 className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors border border-zinc-800 rounded-lg px-3 py-1.5"
               >
                 <ExternalLink className="w-3.5 h-3.5" />

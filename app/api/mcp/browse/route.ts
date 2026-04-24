@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { logMcpEvent } from '@/lib/mcp-tracking'
+import { getAuthUser } from '@/lib/api-auth'
 
 /**
  * Browse MCPs — no semantic search, just filter + sort by quality.
@@ -46,6 +48,22 @@ export async function GET(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Track interaction only when the user actively filters or changes sort —
+  // skip the default landing load (no filter + quality sort) to avoid noise.
+  if (category || tool || sort !== 'quality') {
+    const user = await getAuthUser()
+    logMcpEvent({
+      eventType: 'browse',
+      userId: user?.id,
+      payload: {
+        category,
+        tool,
+        sort,
+        results_count: count ?? (data?.length ?? 0),
+      },
+    })
   }
 
   const results = (data || []).map((r: {

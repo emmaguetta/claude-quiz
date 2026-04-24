@@ -115,6 +115,7 @@ def load_data() -> dict:
     ai_usage = pd.DataFrame(_fetch_table("ai_usage_logs"))
     questions = pd.DataFrame(_fetch_table("questions"))
     reports = pd.DataFrame(_fetch_table("reports"))
+    mcp_events = pd.DataFrame(_fetch_table("mcp_events"))
 
     users = users[~users.id.isin(excluded_ids)].copy()
     if not profiles.empty:
@@ -129,6 +130,11 @@ def load_data() -> dict:
         ai_usage = ai_usage[
             ai_usage.user_id.isna() | ~ai_usage.user_id.isin(excluded_ids)
         ].copy()
+    # mcp_events: idem, keep NULL user_id (anon users) but drop excluded accounts.
+    if not mcp_events.empty and "user_id" in mcp_events.columns:
+        mcp_events = mcp_events[
+            mcp_events.user_id.isna() | ~mcp_events.user_id.isin(excluded_ids)
+        ].copy()
 
     for df, col in [
         (users, "created_at"),
@@ -139,6 +145,7 @@ def load_data() -> dict:
         (ai_usage, "created_at"),
         (questions, "created_at"),
         (reports, "created_at"),
+        (mcp_events, "created_at"),
     ]:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], utc=True, errors="coerce")
@@ -151,6 +158,7 @@ def load_data() -> dict:
         "ai_usage": ai_usage,
         "questions": questions,
         "reports": reports,
+        "mcp_events": mcp_events,
         "excluded_count": len(excluded_ids),
     }
 
@@ -230,6 +238,21 @@ deep = data["deep_analysis"]
 ai = data["ai_usage"]
 questions = data["questions"]
 reports = data["reports"]
+mcp_events = data["mcp_events"]
+
+
+def _payload_get(df: pd.DataFrame, key: str) -> pd.Series:
+    """Extract a key from the jsonb `payload` column. Returns a Series aligned with df."""
+    if df.empty or "payload" not in df.columns:
+        return pd.Series(dtype=object)
+    return df["payload"].apply(
+        lambda p: (p or {}).get(key) if isinstance(p, dict) else None
+    )
+
+
+browse_events = mcp_events[mcp_events.event_type == "browse"] if not mcp_events.empty else pd.DataFrame()
+detail_events = mcp_events[mcp_events.event_type == "detail_viewed"] if not mcp_events.empty else pd.DataFrame()
+external_events = mcp_events[mcp_events.event_type == "external_click"] if not mcp_events.empty else pd.DataFrame()
 
 search_calls = ai[ai.endpoint == "/api/mcp/search"] if not ai.empty else pd.DataFrame()
 explain_calls = ai[ai.endpoint == "/api/mcp/explain"] if not ai.empty else pd.DataFrame()
@@ -243,12 +266,13 @@ st.caption(
     f"{data['excluded_count']} compte(s))"
 )
 
-tab_overview, tab_users, tab_personas, tab_quiz, tab_search = st.tabs([
+tab_overview, tab_users, tab_personas, tab_quiz, tab_search, tab_mcp = st.tabs([
     "🏠 Vue d'ensemble",
     "👤 Utilisateurs",
     "🧭 Personas & Onboarding",
     "❓ Quiz",
     "🔍 Recherches & IA",
+    "🧩 MCP Events",
 ])
 
 
@@ -979,3 +1003,239 @@ with tab_search:
             yaxis=dict(title="USD"),
         )
         st.plotly_chart(fig, use_container_width=True)
+
+
+# ─── MCP Events ──────────────────────────────────────────────────────────────
+with tab_mcp:
+    st.subheader("Interactions MCP Search (hors recherche NL)")
+    st.caption(
+        "Events trackés dans `mcp_events`. 3 types :\n"
+        "- **browse** = l'utilisateur a appliqué un filtre (catégorie / tool) ou changé le tri.\n"
+        "- **detail_viewed** = le panneau d'un MCP a été ouvert.\n"
+        "- **external_click** = clic sur un lien Site ou GitHub depuis le panneau détail.\n\n"
+        "⚠️ Le page-load par défaut (sans filtre, tri `quality`) n'est pas loggé pour éviter la pollution."
+    )
+
+    if mcp_events.empty:
+        st.info(
+            "Aucun event enregistré pour le moment. Les events apparaîtront dès qu'un utilisateur "
+            "(hors comptes exclus) filtrera par catégorie, ouvrira un MCP, ou cliquera un lien externe."
+        )
+    else:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Total events", len(mcp_events))
+        c2.metric("Browse (filtres/tri)", len(browse_events))
+        c3.metric("MCP ouverts", len(detail_events))
+        c4.metric("Clics externes", len(external_events))
+
+        st.divider()
+
+        # ─── Filtres de navigation ─────────────────────────────────────
+        st.markdown("### 🗂️ Filtres de navigation (browse)")
+        st.caption(
+            "Logique : pour chaque event `browse`, on extrait `payload->category`, `payload->tool`, "
+            "`payload->sort`. On compte les occurrences. Un event peut avoir `category` ET `tool` (combo)."
+        )
+
+        if browse_events.empty:
+            st.info("Aucun event `browse` enregistré.")
+        else:
+            col_a, col_b = st.columns(2)
+
+            with col_a:
+                st.markdown("**Catégories les plus consultées**")
+                cats = _payload_get(browse_events, "category").dropna()
+                if cats.empty:
+                    st.info("Aucun filtre de catégorie utilisé (seulement des filtres `tool` ou tris).")
+                else:
+                    counts = cats.value_counts().sort_values(ascending=True)
+                    ys = counts.index.tolist()
+                    xs = [int(v) for v in counts.values.tolist()]
+                    total = sum(xs)
+                    labels = [f"{n} ({round(100*n/total,1)}%)" for n in xs]
+                    fig = go.Figure(data=[go.Bar(
+                        y=ys, x=xs, orientation="h", text=labels, textposition="outside",
+                        marker_color="#1f77b4", cliponaxis=False,
+                    )])
+                    fig.update_layout(
+                        height=max(300, 40 + 30 * len(ys)), margin=dict(l=0, r=0, t=10, b=0),
+                        xaxis=dict(title="events", range=[0, max(xs) * 1.2]),
+                        yaxis=dict(title=""),
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+            with col_b:
+                st.markdown("**Tools / brands les plus filtrés**")
+                tools_s = _payload_get(browse_events, "tool").dropna()
+                if tools_s.empty:
+                    st.info("Aucun filtre `tool` utilisé.")
+                else:
+                    counts = tools_s.value_counts().head(15).sort_values(ascending=True)
+                    ys = counts.index.tolist()
+                    xs = [int(v) for v in counts.values.tolist()]
+                    total = int(tools_s.shape[0])
+                    labels = [f"{n} ({round(100*n/total,1)}%)" for n in xs]
+                    fig = go.Figure(data=[go.Bar(
+                        y=ys, x=xs, orientation="h", text=labels, textposition="outside",
+                        marker_color="#9333ea", cliponaxis=False,
+                    )])
+                    fig.update_layout(
+                        height=max(300, 40 + 30 * len(ys)), margin=dict(l=0, r=0, t=10, b=0),
+                        xaxis=dict(title="events", range=[0, max(xs) * 1.2]),
+                        yaxis=dict(title=""),
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+            st.markdown("**Tri utilisé**")
+            st.caption("Rappel : `quality` (défaut) n'est enregistré que si couplé à un filtre.")
+            sorts = _payload_get(browse_events, "sort").dropna()
+            if not sorts.empty:
+                sort_counts = sorts.value_counts().reset_index()
+                sort_counts.columns = ["sort", "events"]
+                st.dataframe(sort_counts, use_container_width=True, hide_index=True)
+
+        st.divider()
+
+        # ─── MCPs ouverts ──────────────────────────────────────────────
+        st.markdown("### 📖 MCPs les plus ouverts")
+        st.caption(
+            "Logique : chaque ouverture du panneau `McpDetailSheet` loggue un event `detail_viewed` "
+            "avec le `mcp_slug` et `mcp_name`. On compte les occurrences."
+        )
+
+        if detail_events.empty:
+            st.info("Aucun MCP ouvert pour le moment.")
+        else:
+            slugs = _payload_get(detail_events, "mcp_slug").dropna()
+            names = _payload_get(detail_events, "mcp_name").dropna()
+            # Prefer name for readability, fall back to slug
+            labels_series = names.where(names.notna(), slugs) if not names.empty else slugs
+            counts = labels_series.value_counts().head(20).sort_values(ascending=True)
+            ys = counts.index.tolist()
+            xs = [int(v) for v in counts.values.tolist()]
+            total = int(detail_events.shape[0])
+            labels = [f"{n} ({round(100*n/total,1)}%)" for n in xs]
+            fig = go.Figure(data=[go.Bar(
+                y=ys, x=xs, orientation="h", text=labels, textposition="outside",
+                marker_color="#059669", cliponaxis=False,
+            )])
+            fig.update_layout(
+                height=max(300, 40 + 30 * len(ys)), margin=dict(l=0, r=0, t=10, b=0),
+                xaxis=dict(title="ouvertures", range=[0, max(xs) * 1.25]),
+                yaxis=dict(title=""),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Search vs browse provenance
+            source_q = _payload_get(detail_events, "source_query")
+            from_search = source_q.notna().sum()
+            from_browse = source_q.isna().sum()
+            st.markdown("**Provenance des ouvertures**")
+            st.caption(
+                "Si le panneau a été ouvert depuis une recherche NL, `source_query` contient la requête. "
+                "Sinon, l'utilisateur arrivait du mode browse."
+            )
+            c1, c2 = st.columns(2)
+            c1.metric("Depuis une recherche NL", int(from_search))
+            c2.metric("Depuis le browse", int(from_browse))
+
+        st.divider()
+
+        # ─── Clics externes ────────────────────────────────────────────
+        st.markdown("### 🔗 Clics externes (Site vs GitHub)")
+        st.caption(
+            "Event `external_click` avec `target = site | github` dans le payload. "
+            "Indicateur d'intention : l'utilisateur a assez aimé le MCP pour cliquer sortir."
+        )
+
+        if external_events.empty:
+            st.info("Aucun clic externe enregistré.")
+        else:
+            targets = _payload_get(external_events, "target").dropna()
+            target_counts = targets.value_counts().reset_index()
+            target_counts.columns = ["target", "clics"]
+            c1, c2 = st.columns([1, 2])
+            with c1:
+                st.dataframe(target_counts, use_container_width=True, hide_index=True)
+            with c2:
+                st.markdown("**Top MCPs cliqués vers l'extérieur**")
+                ext_names = _payload_get(external_events, "mcp_name").dropna()
+                if not ext_names.empty:
+                    top = ext_names.value_counts().head(10).reset_index()
+                    top.columns = ["MCP", "clics"]
+                    st.dataframe(top, use_container_width=True, hide_index=True)
+
+        st.divider()
+
+        # ─── Funnel browse → detail → external ─────────────────────────
+        st.markdown("### 🔻 Funnel d'engagement")
+        st.caption(
+            "Basé sur les events bruts (pas par utilisateur). "
+            "Taux = `detail_viewed / browse` et `external_click / detail_viewed`. "
+            "C'est une mesure globale de la qualité de navigation, pas un funnel par session."
+        )
+        n_browse = len(browse_events)
+        n_detail = len(detail_events)
+        n_ext = len(external_events)
+        labels_f = ["Browse", "Detail ouvert", "Clic externe"]
+        values_f = [n_browse, n_detail, n_ext]
+        base = max(n_browse, 1)
+        texts_f = [
+            f"{n_browse}",
+            f"{n_detail} ({round(100 * n_detail / base, 1)}% des browse)",
+            f"{n_ext} ({round(100 * n_ext / max(n_detail, 1), 1)}% des detail)",
+        ]
+        fig = go.Figure(data=[go.Bar(
+            y=labels_f[::-1], x=values_f[::-1], orientation="h",
+            text=texts_f[::-1], textposition="outside",
+            marker=dict(color=values_f[::-1], colorscale="Teal", cmin=0, cmax=max(values_f) or 1),
+            cliponaxis=False,
+        )])
+        fig.update_layout(
+            height=280, margin=dict(l=0, r=0, t=10, b=0),
+            xaxis=dict(title="events", range=[0, max(values_f) * 1.25 if max(values_f) else 1]),
+            yaxis=dict(title=""),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ─── Timeline ──────────────────────────────────────────────────
+        st.markdown("### 📅 Volume d'events par jour")
+        daily_b = _daily_counts(browse_events, "created_at", "browse")
+        daily_d = _daily_counts(detail_events, "created_at", "detail_viewed")
+        daily_e = _daily_counts(external_events, "created_at", "external_click")
+        if not (daily_b.empty and daily_d.empty and daily_e.empty):
+            merged_d = daily_b
+            if not daily_d.empty:
+                merged_d = merged_d.merge(daily_d, on="day", how="outer") if not merged_d.empty else daily_d
+            if not daily_e.empty:
+                merged_d = merged_d.merge(daily_e, on="day", how="outer") if not merged_d.empty else daily_e
+            merged_d = merged_d.fillna(0).sort_values("day")
+            days_list = merged_d["day"].astype(str).tolist()
+            fig = go.Figure()
+            for col, color in [("browse", "#1f77b4"), ("detail_viewed", "#059669"), ("external_click", "#ef4444")]:
+                if col in merged_d.columns:
+                    ys = [int(v) for v in merged_d[col].tolist()]
+                    fig.add_trace(go.Bar(x=days_list, y=ys, name=col, text=[str(v) for v in ys], textposition="outside"))
+            fig.update_layout(
+                height=360, margin=dict(l=0, r=0, t=10, b=0), barmode="group",
+                xaxis=dict(type="category", title="date"),
+                yaxis=dict(title="events"),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ─── Raw events table ─────────────────────────────────────────
+        with st.expander("📋 Events bruts (100 derniers)"):
+            recent = mcp_events.sort_values("created_at", ascending=False).head(100).copy()
+            if not recent.empty:
+                merged_ev = recent.merge(users[["id", "email"]], left_on="user_id", right_on="id", how="left")
+                merged_ev["payload_str"] = merged_ev["payload"].apply(
+                    lambda p: ", ".join(f"{k}={v}" for k, v in (p or {}).items() if v is not None) if isinstance(p, dict) else ""
+                )
+                st.dataframe(
+                    merged_ev[["created_at", "event_type", "email", "payload_str"]],
+                    use_container_width=True, hide_index=True, height=400,
+                )
