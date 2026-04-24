@@ -23,18 +23,36 @@ export function ConsentBanner() {
       role="dialog"
       aria-live="polite"
       aria-label="Consentement aux cookies"
-      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-2xl rounded-lg border border-zinc-800 bg-zinc-950/95 p-4 shadow-xl backdrop-blur md:left-auto md:right-4"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur"
     >
-      <p className="mb-3 text-sm text-zinc-200">
-        Nous utilisons Google Analytics pour mesurer l&apos;audience du site et améliorer votre expérience. Vos données sont anonymisées.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => handle('granted')}>
-          Accepter
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => handle('denied')}>
-          Refuser
-        </Button>
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 md:flex-row md:items-center md:justify-between md:gap-8">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl" aria-hidden="true">🍪</span>
+          <div className="space-y-1 text-sm text-zinc-300">
+            <p className="font-semibold text-zinc-100">Nous respectons votre vie privée</p>
+            <p className="leading-relaxed">
+              Nous utilisons des cookies pour mesurer l&apos;audience du site (Google Analytics) et améliorer votre expérience.
+              Vous pouvez accepter ou refuser à tout moment. Vos données sont anonymisées.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-shrink-0 gap-2 md:gap-3">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handle('denied')}
+            className="flex-1 md:flex-none"
+          >
+            Refuser
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => handle('granted')}
+            className="flex-1 md:flex-none"
+          >
+            Tout accepter
+          </Button>
+        </div>
       </div>
     </div>
   )
