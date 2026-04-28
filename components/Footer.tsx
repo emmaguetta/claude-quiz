@@ -28,6 +28,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/mcp-search/guide" className="text-zinc-500 hover:text-zinc-300 transition-colors">
+                  {f.mcpGuide}
+                </Link>
+              </li>
+              <li>
                 <Link href="/faq" className="text-zinc-500 hover:text-zinc-300 transition-colors">
                   {f.faq}
                 </Link>

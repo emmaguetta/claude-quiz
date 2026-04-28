@@ -131,11 +131,19 @@ export default function Home() {
               )}
             </div>
 
-            <Link href="/mcp-search">
-              <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:text-zinc-100 hover:border-zinc-500 font-semibold py-6 text-base">
-                {t.mcpSearch.homeCta}
-              </Button>
-            </Link>
+            <div className="space-y-3">
+              <Link href="/mcp-search">
+                <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:text-zinc-100 hover:border-zinc-500 font-semibold py-6 text-base">
+                  {t.mcpSearch.homeCta}
+                </Button>
+              </Link>
+              <Link
+                href="/mcp-search/guide"
+                className="block text-center text-sm text-amber-300/80 hover:text-amber-200 transition-colors"
+              >
+                {t.mcpSearch.homeGuideLink}
+              </Link>
+            </div>
           </div>
 
         </div>
