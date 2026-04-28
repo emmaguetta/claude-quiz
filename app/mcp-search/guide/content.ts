@@ -49,6 +49,10 @@ export type GuideContent = {
   addCursorNoteAfter: string
   addCli: string
   addCliDesc: string
+  addSkipToUnlockBefore: string
+  addSkipToUnlockCta: string
+  addSkipToUnlockAfter: string
+  addManualTitle: string
 
   // Step 2 (optional): Unlock unlimited
   unlockTitle: string
@@ -57,6 +61,8 @@ export type GuideContent = {
   unlockHowToBefore: string
   unlockHowToStrong: string
   unlockHowToAfter: string
+  unlockCliTitle: string
+  unlockCliDesc: string
 
   // Step 3: First prompt
   firstPromptTitle: string
@@ -198,8 +204,12 @@ const FR: GuideContent = {
   addCursorNoteMiddle: ' → ',
   addCursorNoteAction: 'Reload Window',
   addCursorNoteAfter: ') pour que la config soit prise en compte.',
-  addCli: 'Ou via la CLI (Claude Code uniquement)',
-  addCliDesc: 'Une seule commande, équivalente au snippet JSON ci-dessus :',
+  addCli: 'En une commande (Claude Code)',
+  addCliDesc: 'Lance ça dans ton terminal :',
+  addSkipToUnlockBefore: 'Tu as déjà une clé API ou tu veux passer en illimité tout de suite ? ',
+  addSkipToUnlockCta: 'Va directement à l’étape 2 →',
+  addSkipToUnlockAfter: '',
+  addManualTitle: 'Ou édite la config à la main',
 
   // Step 2
   unlockTitle: 'Passe en illimité (optionnel)',
@@ -211,6 +221,9 @@ const FR: GuideContent = {
   unlockHowToStrong: '"headers"',
   unlockHowToAfter:
     " avec ta clé en Bearer. Voici la config complète (remplace `mcps_PASTE_YOUR_KEY_HERE` par ta vraie clé) :",
+  unlockCliTitle: 'Ou en une commande',
+  unlockCliDesc:
+    "Au lieu d'éditer le fichier JSON, lance directement (remplace `mcps_PASTE_YOUR_KEY_HERE` par ta vraie clé) :",
 
   // Step 3
   firstPromptTitle: 'Premier prompt',
@@ -345,8 +358,12 @@ const EN: GuideContent = {
   addCursorNoteMiddle: ' → ',
   addCursorNoteAction: 'Reload Window',
   addCursorNoteAfter: ') so the config is picked up.',
-  addCli: 'Or via the CLI (Claude Code only)',
-  addCliDesc: 'A single command, equivalent to the JSON snippet above:',
+  addCli: 'One-liner (Claude Code)',
+  addCliDesc: 'Run this in your terminal:',
+  addSkipToUnlockBefore: 'Already have an API key, or want unlimited from day one? ',
+  addSkipToUnlockCta: 'Skip to step 2 →',
+  addSkipToUnlockAfter: '',
+  addManualTitle: 'Or edit your config manually',
 
   // Step 2
   unlockTitle: 'Go unlimited (optional)',
@@ -357,6 +374,9 @@ const EN: GuideContent = {
   unlockHowToStrong: '"headers"',
   unlockHowToAfter:
     ' field with your key as Bearer. Here is the full config (replace `mcps_PASTE_YOUR_KEY_HERE` with your real key):',
+  unlockCliTitle: 'Or as a one-liner',
+  unlockCliDesc:
+    "Instead of editing the JSON file, just run (replace `mcps_PASTE_YOUR_KEY_HERE` with your real key):",
 
   // Step 3
   firstPromptTitle: 'First prompt',

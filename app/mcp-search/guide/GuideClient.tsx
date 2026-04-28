@@ -10,6 +10,7 @@ import {
   buildHttpConfigAnonymous,
   buildHttpConfigWithKey,
   buildCliCommandAnonymous,
+  buildCliCommandWithKey,
 } from './content'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://claudequiz.app'
@@ -21,6 +22,7 @@ export function GuideClient() {
   const anonymousConfig = buildHttpConfigAnonymous(MCP_URL)
   const authenticatedConfig = buildHttpConfigWithKey(MCP_URL)
   const cliCommand = buildCliCommandAnonymous(MCP_URL)
+  const cliCommandWithKey = buildCliCommandWithKey(MCP_URL)
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -76,7 +78,24 @@ export function GuideClient() {
             {c.addIntroAfter}
           </p>
 
-          <h3 className="text-zinc-200 font-semibold pt-2">{c.addClaudeCode}</h3>
+          <h3 className="text-zinc-200 font-semibold pt-2">{c.addCli}</h3>
+          <p className="text-sm">{c.addCliDesc}</p>
+          <CodeBlock code={cliCommand} lang="bash" title="terminal" />
+
+          <p className="text-sm text-zinc-400 pt-1">
+            {c.addSkipToUnlockBefore}
+            <a
+              href="#unlock"
+              className="text-amber-300 hover:text-amber-200 underline underline-offset-2"
+            >
+              {c.addSkipToUnlockCta}
+            </a>
+            {c.addSkipToUnlockAfter}
+          </p>
+
+          <h3 className="text-zinc-200 font-semibold pt-6">{c.addManualTitle}</h3>
+
+          <h4 className="text-zinc-300 font-medium pt-2 text-sm">{c.addClaudeCode}</h4>
           <p className="text-sm">
             {c.addClaudeCodePathBefore}
             <code className="text-amber-300">{c.addClaudeCodePath}</code>
@@ -85,7 +104,7 @@ export function GuideClient() {
           <CodeBlock code={anonymousConfig} lang="json" title="~/.claude.json" />
           <p className="text-sm text-zinc-500">{c.addClaudeCodeNote}</p>
 
-          <h3 className="text-zinc-200 font-semibold pt-4">{c.addClaudeDesktop}</h3>
+          <h4 className="text-zinc-300 font-medium pt-4 text-sm">{c.addClaudeDesktop}</h4>
           <p className="text-sm">
             {c.addClaudeDesktopPathBefore}
             <code className="text-amber-300">{c.addClaudeDesktopMacPath}</code>
@@ -96,7 +115,7 @@ export function GuideClient() {
           <CodeBlock code={anonymousConfig} lang="json" title="claude_desktop_config.json" />
           <p className="text-sm text-zinc-500">{c.addClaudeDesktopNote}</p>
 
-          <h3 className="text-zinc-200 font-semibold pt-4">{c.addCursor}</h3>
+          <h4 className="text-zinc-300 font-medium pt-4 text-sm">{c.addCursor}</h4>
           <p className="text-sm">
             {c.addCursorPathBefore}
             <code className="text-amber-300">{c.addCursorPath}</code>
@@ -112,10 +131,6 @@ export function GuideClient() {
             <em>{c.addCursorNoteAction}</em>
             {c.addCursorNoteAfter}
           </p>
-
-          <h3 className="text-zinc-200 font-semibold pt-4">{c.addCli}</h3>
-          <p className="text-sm">{c.addCliDesc}</p>
-          <CodeBlock code={cliCommand} lang="bash" title="terminal" />
         </Section>
 
         <Section anchor="unlock" title={c.unlockTitle} stepNumber={2}>
@@ -132,6 +147,10 @@ export function GuideClient() {
             {c.unlockHowToAfter}
           </p>
           <CodeBlock code={authenticatedConfig} lang="json" title="~/.claude.json" />
+
+          <h3 className="text-zinc-200 font-semibold pt-4">{c.unlockCliTitle}</h3>
+          <p className="text-sm">{c.unlockCliDesc}</p>
+          <CodeBlock code={cliCommandWithKey} lang="bash" title="terminal" />
         </Section>
 
         <Section anchor="firstprompt" title={c.firstPromptTitle} stepNumber={3}>
