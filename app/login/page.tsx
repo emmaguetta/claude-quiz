@@ -32,6 +32,11 @@ export default function LoginPage() {
   const supabase = createClient()
   const { t } = useLocale()
   const authError = searchParams.get('error') === 'auth'
+  const rawRedirect = searchParams.get('redirectTo')
+  // Only allow same-origin paths to prevent open-redirect abuse
+  const redirectTo = rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+    ? rawRedirect
+    : null
 
   async function handleEmailAuth(e: React.FormEvent) {
     e.preventDefault()
@@ -60,10 +65,13 @@ export default function LoginPage() {
         }
       }
 
+      const callbackUrl = redirectTo
+        ? `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`
+        : `${window.location.origin}/auth/callback`
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        options: { emailRedirectTo: callbackUrl },
       })
       if (error) {
         setError(error.message)
@@ -85,7 +93,9 @@ export default function LoginPage() {
             .select('onboarded')
             .eq('id', user.id)
             .single()
-          router.push(profile?.onboarded ? '/quiz' : '/onboarding')
+          // If onboarded, honor redirectTo; else always go through onboarding first.
+          const target = profile?.onboarded ? (redirectTo ?? '/quiz') : '/onboarding'
+          router.push(target)
         }
       }
     }
@@ -93,9 +103,12 @@ export default function LoginPage() {
   }
 
   async function handleOAuth(provider: 'github' | 'google' | 'azure') {
+    const callbackUrl = redirectTo
+      ? `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`
+      : `${window.location.origin}/auth/callback`
     await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: callbackUrl },
     })
   }
 

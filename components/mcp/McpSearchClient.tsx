@@ -205,6 +205,41 @@ export function McpSearchClient({ initialCategoryGroups, initialTools, initialTo
           <p className="text-zinc-400 text-lg max-w-xl mx-auto">{t.mcpSearch.subtitle}</p>
         </div>
 
+        <div className="mb-6 rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.08] via-zinc-900/40 to-zinc-900/40 p-4 sm:p-5">
+          <div className="flex items-start gap-4">
+            <div className="hidden sm:flex shrink-0 w-10 h-10 rounded-lg bg-amber-500/10 items-center justify-center text-xl">
+              ⚡
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-1.5 py-0.5">
+                  {t.mcpSearch.mcpServerBannerBadge}
+                </span>
+                <h2 className="text-sm sm:text-base font-semibold text-zinc-100">
+                  {t.mcpSearch.mcpServerBannerTitle}
+                </h2>
+              </div>
+              <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed mb-3">
+                {t.mcpSearch.mcpServerBannerDesc}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/mcp-setup"
+                  className="inline-flex items-center text-xs font-semibold text-amber-200 bg-amber-500/15 border border-amber-500/40 hover:bg-amber-500/25 rounded px-2.5 py-1 transition-colors"
+                >
+                  {locale === 'fr' ? 'Générer ma clé API →' : 'Generate my API key →'}
+                </Link>
+                <Link
+                  href="/mcp-search/guide"
+                  className="inline-flex items-center text-xs font-medium text-zinc-300 hover:text-zinc-100 px-2.5 py-1"
+                >
+                  {locale === 'fr' ? 'Guide d’installation →' : 'Install guide →'}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="mb-10">
           <McpSearchInput onSearch={handleSearch} onClear={handleClearSearch} loading={loading} initialValue={lastQuery} />
         </div>

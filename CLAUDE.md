@@ -7,6 +7,12 @@
 Application Next.js 16 qui aide à apprendre Claude Code via des quiz interactifs à choix multiples.
 Les questions sont stockées dans Supabase et générées automatiquement depuis les docs Anthropic via l'AI SDK.
 
+Le repo contient **deux apps distinctes** :
+- **`/` (racine)** — l'app Next.js publique (quiz + MCP search), lancée avec `npm run dev` (port 3000).
+- **`dashboard/`** — un **dashboard analytics Streamlit** (Python) séparé, pour analyser l'usage interne (inscriptions, quiz, recherches, coûts IA). Lancé avec `streamlit run app.py` (port 8501). Voir `dashboard/README.md`.
+
+Quand l'utilisateur dit « le dashboard » **sans contexte Next.js**, il parle presque toujours du Streamlit dans `dashboard/`. Le `/admin/usage` de l'app Next.js est juste une page de coûts IA, pas « le dashboard ».
+
 ## Stack
 
 - **Next.js 16** (App Router, TypeScript) — Server Components par défaut, `'use client'` uniquement pour l'interactivité

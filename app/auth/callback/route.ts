@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const rawRedirect = searchParams.get('redirectTo')
+  const redirectTo =
+    rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+      ? rawRedirect
+      : null
 
   if (code) {
     const supabase = await createClient()
@@ -23,7 +28,7 @@ export async function GET(request: Request) {
           return NextResponse.redirect(`${origin}/onboarding`)
         }
       }
-      return NextResponse.redirect(`${origin}/quiz`)
+      return NextResponse.redirect(`${origin}${redirectTo ?? '/quiz'}`)
     }
   }
 

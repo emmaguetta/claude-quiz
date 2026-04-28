@@ -1,12 +1,14 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const PUBLIC_PATHS = ['/', '/login', '/auth/callback', '/faq']
+const PUBLIC_PATHS = ['/', '/login', '/auth/callback', '/faq', '/mcp-search/guide']
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Skip public paths, API routes, and SEO/meta files
+  // Skip public paths, API routes, and SEO/meta files.
+  // Note: /mcp-setup is NOT public — login required to generate an API key.
+  // The page redirects unauth users to /login?redirectTo=/mcp-setup.
   if (
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith('/api/') ||

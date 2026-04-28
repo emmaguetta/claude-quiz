@@ -307,6 +307,10 @@ const translations = {
       creditsRemaining: (n: number, total: number) => `${n}/${total} analyses restantes ce mois`,
       loginRequired: 'Connecte-toi pour utiliser cette fonctionnalité (10 gratuites/mois).',
       limitReached: 'Tu as atteint ta limite mensuelle. Elle se réinitialise le 1er du mois.',
+      mcpServerBannerTitle: 'Utilise ce moteur directement dans Claude',
+      mcpServerBannerDesc: 'Génère une clé API et colle le snippet dans la config de Claude Code, Claude Desktop ou Cursor. Setup en 30 secondes.',
+      mcpServerBannerCta: 'Voir le guide d’installation →',
+      mcpServerBannerBadge: 'Nouveau',
     },
     // FAQ
     faqPage: {
@@ -687,6 +691,10 @@ const translations = {
       creditsRemaining: (n: number, total: number) => `${n}/${total} analyses left this month`,
       loginRequired: 'Sign in to use this feature (10 free per month).',
       limitReached: 'Monthly limit reached. Resets on the 1st.',
+      mcpServerBannerTitle: 'Use this engine directly inside Claude',
+      mcpServerBannerDesc: 'Generate an API key and paste the snippet into your Claude Code, Claude Desktop or Cursor config. 30-second setup.',
+      mcpServerBannerCta: 'See the install guide →',
+      mcpServerBannerBadge: 'New',
     },
     faqPage: {
       back: '← Home',
