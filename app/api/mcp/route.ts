@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { searchMcpsCore, getMcpDetailsCore } from '@/lib/mcp-search-core'
 import {
   authenticateMcpHttp,
@@ -93,11 +94,20 @@ export async function POST(request: Request) {
   }
 
   if (method === 'initialize') {
-    return jsonRpcResult(id, {
-      protocolVersion: PROTOCOL_VERSION,
-      capabilities: { tools: {} },
-      serverInfo: SERVER_INFO,
-    })
+    // Per MCP Streamable HTTP spec: server MAY assign Mcp-Session-Id at initialize.
+    // If we issue one, the client MUST echo it back on subsequent requests.
+    // Reuse an existing session id if the client already has one (rare but spec-compliant).
+    const existing = request.headers.get('mcp-session-id')
+    const sessionId = existing && existing.length > 0 ? existing : randomUUID()
+    return jsonRpcResult(
+      id,
+      {
+        protocolVersion: PROTOCOL_VERSION,
+        capabilities: { tools: {} },
+        serverInfo: SERVER_INFO,
+      },
+      { 'Mcp-Session-Id': sessionId }
+    )
   }
 
   if (method === 'tools/list') {
@@ -119,6 +129,7 @@ export async function OPTIONS() {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, Mcp-Session-Id',
+      'Access-Control-Expose-Headers': 'Mcp-Session-Id',
       'Access-Control-Max-Age': '86400',
     },
   })
@@ -247,12 +258,14 @@ function isJsonRpcRequest(body: unknown): body is { jsonrpc: '2.0'; id: unknown;
   return r.jsonrpc === '2.0' && typeof r.method === 'string'
 }
 
-function jsonRpcResult(id: unknown, result: unknown): NextResponse {
+function jsonRpcResult(id: unknown, result: unknown, extraHeaders?: Record<string, string>): NextResponse {
   return NextResponse.json(
     { jsonrpc: '2.0', id, result },
     {
       headers: {
         'Access-Control-Allow-Origin': '*',
+        'Access-Control-Expose-Headers': 'Mcp-Session-Id',
+        ...(extraHeaders ?? {}),
       },
     }
   )
