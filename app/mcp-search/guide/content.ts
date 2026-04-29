@@ -5,6 +5,15 @@ export type GuideContent = {
   metaDescription: string
   navBack: string
   navHome: string
+  navIndexTitle: string
+  navWhat: string
+  navAdd: string
+  navUnlock: string
+  navFirstPrompt: string
+  navTools: string
+  navExamples: string
+  navTrouble: string
+  navSecurity: string
   badge: string
   heroTitle: string
   heroSubtitle: string
@@ -159,6 +168,15 @@ const FR: GuideContent = {
     'Connecte le moteur de recherche MCP de claude-quiz à Claude Code, Claude Desktop ou Cursor en quelques minutes.',
   navBack: '← Retour à la recherche',
   navHome: 'Accueil',
+  navIndexTitle: 'Sur cette page',
+  navWhat: "C'est quoi ?",
+  navAdd: 'Étape 1 — Ajouter le MCP',
+  navUnlock: 'Étape 2 — Passer en illimité',
+  navFirstPrompt: 'Étape 3 — Premier prompt',
+  navTools: 'Référence des tools',
+  navExamples: 'Exemples',
+  navTrouble: 'Dépannage',
+  navSecurity: 'Sécurité',
   badge: 'Nouveau · MCP server',
   heroTitle: 'Utilise notre moteur MCP directement dans Claude',
   heroSubtitle:
@@ -313,6 +331,15 @@ const EN: GuideContent = {
     'Connect the claude-quiz MCP search engine to Claude Code, Claude Desktop, or Cursor in a few minutes.',
   navBack: '← Back to search',
   navHome: 'Home',
+  navIndexTitle: 'On this page',
+  navWhat: 'What is this?',
+  navAdd: 'Step 1 — Add the MCP',
+  navUnlock: 'Step 2 — Go unlimited',
+  navFirstPrompt: 'Step 3 — First prompt',
+  navTools: 'Tools reference',
+  navExamples: 'Examples',
+  navTrouble: 'Troubleshooting',
+  navSecurity: 'Security',
   badge: 'New · MCP server',
   heroTitle: 'Use our MCP search engine directly inside Claude',
   heroSubtitle:

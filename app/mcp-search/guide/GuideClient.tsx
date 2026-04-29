@@ -5,6 +5,7 @@ import { useLocale } from '@/components/LocaleProvider'
 import { LocaleToggle } from '@/components/LocaleToggle'
 import { Badge } from '@/components/ui/badge'
 import { CodeBlock } from '@/components/mcp-guide/CodeBlock'
+import { GuideSidebar } from '@/components/mcp-guide/GuideSidebar'
 import {
   getGuideContent,
   buildHttpConfigAnonymous,
@@ -24,10 +25,21 @@ export function GuideClient() {
   const cliCommand = buildCliCommandAnonymous(MCP_URL)
   const cliCommandWithKey = buildCliCommandWithKey(MCP_URL)
 
+  const sidebarItems = [
+    { anchor: 'what', label: c.navWhat },
+    { anchor: 'add', label: c.navAdd },
+    { anchor: 'unlock', label: c.navUnlock },
+    { anchor: 'firstprompt', label: c.navFirstPrompt },
+    { anchor: 'tools', label: c.navTools },
+    { anchor: 'examples', label: c.navExamples },
+    { anchor: 'trouble', label: c.navTrouble },
+    { anchor: 'security', label: c.navSecurity },
+  ]
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="border-b border-zinc-900">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/mcp-search" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
             {c.navBack}
           </Link>
@@ -40,7 +52,14 @@ export function GuideClient() {
         </div>
       </div>
 
-      <article className="max-w-3xl mx-auto px-4 py-10 sm:py-14">
+      <div className="max-w-6xl mx-auto px-4 flex gap-10">
+        <aside className="hidden lg:block w-60 shrink-0">
+          <div className="sticky top-6 pt-10">
+            <GuideSidebar items={sidebarItems} label={c.navIndexTitle} />
+          </div>
+        </aside>
+
+        <article className="flex-1 min-w-0 max-w-3xl py-10 sm:py-14">
         <header className="space-y-4 mb-12">
           <Badge className="bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/15">
             {c.badge}
@@ -250,7 +269,8 @@ export function GuideClient() {
             {c.ctaFaq}
           </Link>
         </div>
-      </article>
+        </article>
+      </div>
     </main>
   )
 }
