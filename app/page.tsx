@@ -9,6 +9,7 @@ import { useLocale } from '@/components/LocaleProvider'
 import { LocaleToggle } from '@/components/LocaleToggle'
 import { createClient } from '@/lib/supabase/client'
 import LightRays from '@/components/LightRays'
+import { OneLineInstall } from '@/components/mcp/OneLineInstall'
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth()
@@ -157,6 +158,8 @@ export default function Home() {
           </div>
 
         </div>
+
+        <OneLineInstall />
       </div>
     </main>
   )

@@ -315,6 +315,11 @@ const translations = {
       mcpServerBannerDesc: 'Génère une clé API et colle le snippet dans la config de Claude Code, Claude Desktop ou Cursor. Setup en 30 secondes.',
       mcpServerBannerCta: 'Voir le guide d’installation →',
       mcpServerBannerBadge: 'Nouveau',
+      oneLineTitle: 'Ajoute le MCP en une ligne',
+      oneLineHint: 'Une commande, 3 recherches gratuites — pas besoin de compte. Compatible Claude Code.',
+      oneLineGuideLink: 'Voir le guide complet →',
+      oneLineCopy: 'Copier',
+      oneLineCopied: '✓ Copié',
     },
     // FAQ
     faqPage: {
@@ -704,6 +709,11 @@ const translations = {
       mcpServerBannerDesc: 'Generate an API key and paste the snippet into your Claude Code, Claude Desktop or Cursor config. 30-second setup.',
       mcpServerBannerCta: 'See the install guide →',
       mcpServerBannerBadge: 'New',
+      oneLineTitle: 'Add the MCP in one line',
+      oneLineHint: 'One command, 3 free searches — no account needed. Works with Claude Code.',
+      oneLineGuideLink: 'Read the full guide →',
+      oneLineCopy: 'Copy',
+      oneLineCopied: '✓ Copied',
     },
     faqPage: {
       back: '← Home',
