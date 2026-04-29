@@ -72,7 +72,7 @@ export async function searchMcpsCore(input: SearchInput): Promise<{ results: Sea
   const { data, error } = await supabase.rpc('search_mcps', {
     query_embedding: embeddingStr,
     match_threshold: 0.1,
-    match_count: Math.min(input.limit ?? 10, 25),
+    match_count: Math.min(input.limit ?? 30, 50),
     filter_categories: input.categories && input.categories.length > 0 ? input.categories : null,
     query_text: input.query.trim(),
     filter_tool_tags: input.toolTags && input.toolTags.length > 0 ? input.toolTags : null,
@@ -203,5 +203,163 @@ export async function getMcpDetailsCore(slug: string): Promise<DetailsResult | n
       description: t.description,
       inputSchema: t.input_schema,
     })),
+  }
+}
+
+// ─── Deep analysis (re-rank with GPT-4.1-nano per-MCP) ─────────────────
+
+export const ANALYSIS_MONTHLY_LIMIT = 80
+
+export type AnalysisItem = {
+  name: string
+  rank: number
+  relevant: boolean
+  explanation: string
+}
+
+export type AnalysisInput = {
+  query: string
+  results: Array<{
+    name: string
+    description: string | null
+    toolsCount: number
+    matchingChunk: { type: string; toolName?: string }
+  }>
+  locale?: 'fr' | 'en'
+  userId: string
+  endpoint: string
+}
+
+export type AnalysisOutput = {
+  analysis: AnalysisItem[]
+  used: number
+  limit: number
+}
+
+export async function getAnalysisUsage(userId: string): Promise<{ used: number; limit: number; resetsAt: string }> {
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const admin = createAdminClient()
+
+  const { count } = await admin
+    .from('deep_analysis_usage')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', monthStart)
+
+  return {
+    used: count ?? 0,
+    limit: ANALYSIS_MONTHLY_LIMIT,
+    resetsAt: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString(),
+  }
+}
+
+export async function analyzeMcpsCore(input: AnalysisInput): Promise<AnalysisOutput> {
+  if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not configured')
+  if (!input.query || !input.results.length) throw new Error('query and results are required')
+
+  const usage = await getAnalysisUsage(input.userId)
+  if (usage.used >= ANALYSIS_MONTHLY_LIMIT) {
+    const err = new Error('limit_reached') as Error & { used: number; limit: number; resetsAt: string }
+    err.used = usage.used
+    err.limit = usage.limit
+    err.resetsAt = usage.resetsAt
+    throw err
+  }
+
+  const lang = input.locale === 'fr' ? 'French' : 'English'
+  const BATCH_SIZE = 10
+  let totalInputTokens = 0
+  let totalOutputTokens = 0
+
+  async function evaluateOne(r: AnalysisInput['results'][number]): Promise<AnalysisItem> {
+    const tool = r.matchingChunk.toolName
+      ? `Best matching tool: ${r.matchingChunk.toolName}`
+      : ''
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4.1-nano',
+        messages: [
+          {
+            role: 'system',
+            content: `You evaluate whether an MCP (Model Context Protocol server) can DIRECTLY accomplish the user's search query. Reply ONLY with a JSON object: {"relevant": true/false, "explanation": "1-2 sentences"}. You MUST write the explanation in ${lang}.
+
+STRICT RULES:
+- If the query mentions a specific platform (e.g. LinkedIn, Slack, GitHub), the MCP MUST target that EXACT platform to be relevant. An MCP for Instagram or Notion is NOT relevant to a LinkedIn query, even if it has similar features like "comments".
+- The MCP must directly perform the requested action on the requested platform. Having a similar feature on a different platform does NOT count.`,
+          },
+          {
+            role: 'user',
+            content: `Search query: "${input.query}"
+
+MCP: ${r.name} (${r.toolsCount} tools)
+Description: ${r.description || 'No description'}
+${tool}
+
+Is this MCP relevant to the search query?`,
+          },
+        ],
+        max_tokens: 150,
+        temperature: 0.1,
+      }),
+    })
+
+    if (!res.ok) {
+      return { name: r.name, rank: 999, relevant: false, explanation: 'Analysis failed' }
+    }
+
+    const data = await res.json()
+    if (data.usage) {
+      totalInputTokens += data.usage.prompt_tokens || 0
+      totalOutputTokens += data.usage.completion_tokens || 0
+    }
+
+    try {
+      const content = data.choices?.[0]?.message?.content || '{}'
+      const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
+      const parsed = JSON.parse(cleaned)
+      return {
+        name: r.name,
+        rank: 0,
+        relevant: !!parsed.relevant,
+        explanation: parsed.explanation || '',
+      }
+    } catch {
+      return { name: r.name, rank: 999, relevant: false, explanation: 'Analysis failed' }
+    }
+  }
+
+  const analysis: AnalysisItem[] = []
+  for (let i = 0; i < input.results.length; i += BATCH_SIZE) {
+    const batch = input.results.slice(i, i + BATCH_SIZE)
+    const batchResults = await Promise.all(batch.map(evaluateOne))
+    analysis.push(...batchResults)
+  }
+
+  // Relevant first, irrelevant after — preserving original order as tiebreaker
+  let rank = 1
+  for (const item of analysis) if (item.relevant) item.rank = rank++
+  for (const item of analysis) if (!item.relevant) item.rank = rank++
+
+  logAiUsage({
+    endpoint: input.endpoint,
+    model: 'gpt-4.1-nano',
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
+    userId: input.userId,
+  })
+
+  const admin = createAdminClient()
+  await admin.from('deep_analysis_usage').insert({
+    user_id: input.userId,
+    query: input.query,
+  })
+
+  return {
+    analysis,
+    used: usage.used + 1,
+    limit: ANALYSIS_MONTHLY_LIMIT,
   }
 }
