@@ -95,8 +95,8 @@ export default function Home() {
           </span>
         </h1>
 
-        {/* Two cards side by side */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+        {/* Three cards side by side */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
 
           {/* Quiz card */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm p-8 flex flex-col justify-between space-y-6">
@@ -118,7 +118,7 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* MCP card */}
+          {/* MCP catalog card */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm p-8 flex flex-col justify-between space-y-6">
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -131,19 +131,29 @@ export default function Home() {
               )}
             </div>
 
+            <Link href="/mcp-search">
+              <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:text-zinc-100 hover:border-zinc-500 font-semibold py-6 text-base">
+                {t.mcpSearch.homeCta}
+              </Button>
+            </Link>
+          </div>
+
+          {/* MCP server card */}
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm p-8 flex flex-col justify-between space-y-6">
             <div className="space-y-3">
-              <Link href="/mcp-search">
-                <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:text-zinc-100 hover:border-zinc-500 font-semibold py-6 text-base">
-                  {t.mcpSearch.homeCta}
-                </Button>
-              </Link>
-              <Link
-                href="/mcp-search/guide"
-                className="block text-center text-sm text-amber-300/80 hover:text-amber-200 transition-colors"
-              >
-                {t.mcpSearch.homeGuideLink}
-              </Link>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">⚡</span>
+                <h2 className="text-xl font-semibold text-zinc-100">{t.home.mcpServerTitle}</h2>
+              </div>
+              <p className="text-zinc-400 leading-relaxed">{t.home.mcpServerDesc}</p>
+              <p className="text-sm text-zinc-600">{t.home.mcpServerFreeUses}</p>
             </div>
+
+            <Link href="/mcp-search/guide">
+              <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:text-zinc-100 hover:border-zinc-500 font-semibold py-6 text-base">
+                {t.home.mcpServerCta}
+              </Button>
+            </Link>
           </div>
 
         </div>

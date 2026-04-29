@@ -15,6 +15,10 @@ const translations = {
       mcpDesc: 'Cherche et sauvegarde les MCPs dont tu as besoin en décrivant ce que tu veux faire.',
       mcpsAvailable: (n: number) => `${n} MCPs disponibles`,
       mcpTopics: ['Recherche', 'Favoris', '1000+ MCPs', 'GitHub'],
+      mcpServerTitle: 'MCP dans Claude',
+      mcpServerDesc: 'Trouve le bon MCP en discutant avec Claude. Installe notre serveur dans Claude Code, Desktop ou Cursor.',
+      mcpServerCta: 'Guide d\'installation →',
+      mcpServerFreeUses: '3 recherches gratuites, sans compte',
     },
     // Quiz
     quiz: {
@@ -290,7 +294,6 @@ const translations = {
       stars: 'stars',
       homeCta: 'Explorer les MCP →',
       homeDesc: 'Trouve le bon MCP en décrivant ce que tu veux faire',
-      homeGuideLink: 'Connecter le moteur à Claude Code, Desktop ou Cursor →',
       relevanceHigh: 'Très pertinent',
       relevanceMedium: 'Pertinent',
       relevanceLow: 'Possiblement utile',
@@ -413,6 +416,10 @@ const translations = {
       mcpDesc: 'Find and bookmark the MCPs you need by describing what you want to do.',
       mcpsAvailable: (n: number) => `${n} MCPs available`,
       mcpTopics: ['Search', 'Bookmarks', '1000+ MCPs', 'GitHub'],
+      mcpServerTitle: 'MCP in Claude',
+      mcpServerDesc: 'Find the right MCP by chatting with Claude. Install our server in Claude Code, Desktop, or Cursor.',
+      mcpServerCta: 'Install guide →',
+      mcpServerFreeUses: '3 free searches, no account needed',
     },
     quiz: {
       home: '← Home',
@@ -675,7 +682,6 @@ const translations = {
       allCategories: 'All',
       stars: 'stars',
       homeCta: 'Explore MCPs →',
-      homeGuideLink: 'Connect the engine to Claude Code, Desktop, or Cursor →',
       homeDesc: 'Find the right MCP by describing what you want to do',
       relevanceHigh: 'Highly relevant',
       relevanceMedium: 'Relevant',
