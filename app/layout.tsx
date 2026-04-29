@@ -37,7 +37,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Claude Code Quiz — Learn & Explore',
+    default: 'Claude Code Quiz · Learn & Explore',
     template: '%s | Claude Code Quiz',
   },
   description: 'Master Claude Code with interactive quizzes and a semantic MCP search engine. 225+ questions, 4700+ MCPs.',
@@ -49,13 +49,13 @@ export const metadata: Metadata = {
     locale: 'en_US',
     alternateLocale: 'fr_FR',
     siteName: 'Claude Code Quiz',
-    title: 'Claude Code Quiz — Learn & Explore',
+    title: 'Claude Code Quiz · Learn & Explore',
     description: 'Master Claude Code with interactive quizzes and a semantic MCP search engine.',
     url: siteUrl,
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Claude Code Quiz — Learn & Explore',
+    title: 'Claude Code Quiz · Learn & Explore',
     description: 'Master Claude Code with interactive quizzes and a semantic MCP search engine.',
   },
   robots: {
@@ -115,7 +115,7 @@ export default async function RootLayout({
               '@type': 'WebSite',
               name: 'Claude Quiz',
               url: siteUrl,
-              description: 'Interactive learning platform for Claude Code — 225+ quiz questions and 4700+ MCP server directory',
+              description: 'Interactive learning platform for Claude Code: 225+ quiz questions and 4700+ MCP server directory',
               inLanguage: ['en', 'fr'],
               potentialAction: {
                 '@type': 'SearchAction',

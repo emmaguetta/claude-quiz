@@ -38,7 +38,7 @@ const T = {
     generate: 'Générer la clé',
     generating: 'Génération…',
     revoking: 'Révocation…',
-    keyShownOnceTitle: 'Clé créée — copie-la maintenant',
+    keyShownOnceTitle: 'Clé créée, copie-la maintenant',
     keyShownOnceDesc:
       'Tu ne reverras pas cette clé. Si tu la perds, génère-en une nouvelle et révoque l’ancienne.',
     copied: '✓ Copié',
@@ -70,7 +70,7 @@ const T = {
     generate: 'Generate key',
     generating: 'Generating…',
     revoking: 'Revoking…',
-    keyShownOnceTitle: 'Key created — copy it now',
+    keyShownOnceTitle: 'Key created, copy it now',
     keyShownOnceDesc:
       "You won't see this key again. If you lose it, generate a new one and revoke the old one.",
     copied: '✓ Copied',

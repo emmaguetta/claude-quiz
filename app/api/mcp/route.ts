@@ -26,7 +26,7 @@ const TOOLS = [
     name: 'search_mcps',
     description:
       'Search the claude-quiz database of 4,700+ MCP servers using natural language. ' +
-      'IMPORTANT: pass the user\'s query VERBATIM in their own words — do not rephrase, summarize, or split into multiple searches. ' +
+      'IMPORTANT: pass the user\'s query VERBATIM in their own words. Do not rephrase, summarize, or split into multiple searches. ' +
       'The semantic search handles natural language well, including vague or multi-intent queries. ' +
       'Returns 30 raw vector-search results, ranked by hybrid similarity (cosine + keyword). ' +
       'If the user thinks the ranking is off, follow up with `analyze_mcps` (uses 1 monthly AI credit, requires API key) to AI-rerank and filter false positives. ' +
@@ -318,7 +318,7 @@ async function runAnalyze(
       for (const item of irrelevant) {
         const r = bySlug.get(item.name)
         if (!r) continue
-        lines.push(`- **${r.name}** \`${r.slug}\` — ${item.explanation}`)
+        lines.push(`- **${r.name}** \`${r.slug}\` : ${item.explanation}`)
       }
     }
 
@@ -433,7 +433,7 @@ function runStartLogin(auth: AuthResult): string {
 
 1. Open ${SETUP_URL} in your browser.
 2. Sign up or log in (GitHub, Google, or email).
-3. Click "Generate API key" — copy the key shown ONCE.
+3. Click "Generate API key", then copy the key shown ONCE.
 4. Add it to your MCP client config under "headers": { "Authorization": "Bearer <your-key>" }.
 5. Restart your MCP client.
 

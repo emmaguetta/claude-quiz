@@ -98,7 +98,7 @@ export function UserStats() {
                 <div className="text-xs text-zinc-600 tabular-nums">{d.correct}/{d.total}</div>
               </>
             ) : (
-              <div className="text-xs text-zinc-700 mt-2">—</div>
+              <div className="text-xs text-zinc-700 mt-2">·</div>
             )}
           </div>
         ))}

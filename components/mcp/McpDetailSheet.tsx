@@ -239,7 +239,7 @@ export function McpDetailSheet({ mcp, query, onClose }: Props) {
             ) : tools.length === 0 ? (
               <p className="text-sm text-zinc-600">
                 {mcp.toolsCount > 0
-                  ? 'Tool details not available — check the GitHub repo for documentation.'
+                  ? 'Tool details not available. Check the GitHub repo for documentation.'
                   : 'No tools documented.'}
               </p>
             ) : (

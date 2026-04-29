@@ -123,7 +123,7 @@ export default function FaqPage() {
                       <h4 className="text-base font-medium text-zinc-200 mb-1">{item.q}</h4>
                       <p className="text-sm text-zinc-400 leading-relaxed">
                         <span className="text-emerald-400 font-medium">{item.answer}</span>
-                        {' — '}
+                        {' : '}
                         {item.explanation}
                       </p>
                     </article>
