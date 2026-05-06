@@ -217,10 +217,10 @@ with st.sidebar:
             "- **WAU** = pareil sur 7 jours\n"
             "- **MAU** = pareil sur 30 jours\n"
             "- **Stickiness** = DAU / MAU (plus c'est haut, plus les users reviennent)\n\n"
-            "**Recherches MCP** = count de `ai_usage_logs.endpoint = '/api/mcp/search'`. "
-            "Chaque recherche déclenche un embedding OpenAI qui est loggué. "
-            "⚠️ Le **texte** de la query et l'**user_id** ne sont pas stockés pour les recherches normales — "
-            "seules les **deep analyses** gardent la query complète."
+            "**Recherches site web** = count de `ai_usage_logs.endpoint = '/api/mcp/search'` (faites depuis la page `/mcp-search`).\n"
+            "**Appels MCP server** = count de `ai_usage_logs.endpoint = '/api/mcp'` (faites via Claude Code / Cursor / autre client MCP HTTP).\n\n"
+            "Chaque recherche (web ou MCP) déclenche un embedding OpenAI loggué. "
+            "Le **texte** de la query (`query_text`) et l'**user_id** sont stockés sur les deux endpoints (`user_id` est NULL pour les anonymes côté MCP)."
         )
 
 if not SUPABASE_URL or not SERVICE_ROLE_KEY:
@@ -256,6 +256,7 @@ external_events = mcp_events[mcp_events.event_type == "external_click"] if not m
 
 search_calls = ai[ai.endpoint == "/api/mcp/search"] if not ai.empty else pd.DataFrame()
 explain_calls = ai[ai.endpoint == "/api/mcp/explain"] if not ai.empty else pd.DataFrame()
+mcp_server_calls = ai[ai.endpoint == "/api/mcp"] if not ai.empty else pd.DataFrame()
 
 # Stats on pre-tracking logs (user_id NULL = recherches avant la migration user_id)
 searches_with_user = search_calls[search_calls.user_id.notna()] if not search_calls.empty and "user_id" in search_calls.columns else pd.DataFrame()
@@ -281,7 +282,7 @@ with tab_overview:
     st.subheader("Indicateurs clés")
     day, week, month = timedelta(days=1), timedelta(days=7), timedelta(days=30)
 
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
     c1.metric(
         "Utilisateurs", len(users), f"+{len(_within(users, 'created_at', week))} / 7j",
         help="Count de `auth.users` (hors comptes exclus).",
@@ -295,15 +296,19 @@ with tab_overview:
         help="Nombre de lignes dans `quiz_attempts` (chaque réponse à une question).",
     )
     c4.metric(
-        "Recherches MCP", len(search_calls), f"+{len(_within(search_calls, 'created_at', week))} / 7j",
-        help="Appels à `/api/mcp/search` dans `ai_usage_logs`, hors comptes exclus (filtrés par user_id).",
+        "Recherches site web", len(search_calls), f"+{len(_within(search_calls, 'created_at', week))} / 7j",
+        help="Appels à `/api/mcp/search` dans `ai_usage_logs` (recherches faites depuis la page `/mcp-search`), hors comptes exclus.",
     )
     c5.metric(
+        "Appels MCP server", len(mcp_server_calls), f"+{len(_within(mcp_server_calls, 'created_at', week))} / 7j",
+        help="Appels à `/api/mcp` dans `ai_usage_logs` (recherches faites via Claude Code, Cursor, etc. en consommant le serveur MCP HTTP).",
+    )
+    c6.metric(
         "Deep analyses", len(deep), f"+{len(_within(deep, 'created_at', week))} / 7j",
         help="Nombre de lignes dans `deep_analysis_usage`. Contient user_id + query complète.",
     )
     cost = round(ai.cost_usd.sum(), 4) if not ai.empty else 0
-    c6.metric("Coût IA (USD)", f"${cost}", help="Somme de `ai_usage_logs.cost_usd`.")
+    c7.metric("Coût IA (USD)", f"${cost}", help="Somme de `ai_usage_logs.cost_usd`.")
 
     st.divider()
 
@@ -446,9 +451,15 @@ with tab_overview:
     )
 
     _render_daily(
-        "Recherches MCP par jour",
-        "Logique : lignes de `ai_usage_logs` avec `endpoint = '/api/mcp/search'` (chaque recherche déclenche 1 embedding OpenAI qui est loggué).",
+        "Recherches site web par jour",
+        "Logique : lignes de `ai_usage_logs` avec `endpoint = '/api/mcp/search'` (recherches depuis la page `/mcp-search`, 1 embedding OpenAI loggué par recherche).",
         search_calls, "created_at", "recherches",
+    )
+
+    _render_daily(
+        "Appels MCP server par jour",
+        "Logique : lignes de `ai_usage_logs` avec `endpoint = '/api/mcp'` (recherches via Claude Code / Cursor / autre client MCP HTTP).",
+        mcp_server_calls, "created_at", "appels",
     )
 
 
@@ -928,55 +939,83 @@ with tab_quiz:
 with tab_search:
     st.subheader("Recherches MCP (embeddings)")
     st.caption(
-        "Chaque appel à `/api/mcp/search` = une recherche. "
-        "Depuis la dernière migration, le texte de la requête est loggé dans `ai_usage_logs.query_text`."
+        "Le texte de la requête est loggé dans `ai_usage_logs.query_text` pour les deux sources : "
+        "site web (`/api/mcp/search`) et serveur MCP (`/api/mcp`, ex: Claude Code)."
     )
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric(
-        "Recherches MCP (autres users)", len(search_calls),
-        help="Appels à /api/mcp/search après exclusion des comptes bannis.",
+        "Recherches site web", len(search_calls),
+        help="Appels à `/api/mcp/search` (page `/mcp-search`), hors comptes exclus.",
     )
-    c2.metric("Explain IA", len(explain_calls))
-    c3.metric("Deep analyses", len(deep))
+    c2.metric(
+        "Appels MCP server", len(mcp_server_calls),
+        help="Appels à `/api/mcp` (Claude Code, Cursor, etc.).",
+    )
+    c3.metric("Explain IA", len(explain_calls))
+    c4.metric("Deep analyses", len(deep))
 
     # Queries texte (nouveau tracking)
-    search_with_query = search_calls[search_calls.query_text.notna()] if not search_calls.empty and "query_text" in search_calls.columns else pd.DataFrame()
-    if not search_with_query.empty:
-        st.markdown("**Top requêtes de recherche (après migration query_text)**")
-        top_q = search_with_query.query_text.value_counts().reset_index()
-        top_q.columns = ["requête", "n"]
-        st.dataframe(top_q, use_container_width=True, hide_index=True, height=250)
+    col_web, col_mcp = st.columns(2)
 
-        st.markdown("**Chronologie des recherches**")
-        merged_s = search_with_query.sort_values("created_at", ascending=False).merge(
+    with col_web:
+        st.markdown("**Top requêtes — site web**")
+        search_with_query = search_calls[search_calls.query_text.notna()] if not search_calls.empty and "query_text" in search_calls.columns else pd.DataFrame()
+        if not search_with_query.empty:
+            top_q = search_with_query.query_text.value_counts().reset_index()
+            top_q.columns = ["requête", "n"]
+            st.dataframe(top_q, use_container_width=True, hide_index=True, height=250)
+        else:
+            st.info("Aucune recherche site web avec `query_text` stocké.")
+
+    with col_mcp:
+        st.markdown("**Top requêtes — MCP server**")
+        mcp_with_query = mcp_server_calls[mcp_server_calls.query_text.notna()] if not mcp_server_calls.empty and "query_text" in mcp_server_calls.columns else pd.DataFrame()
+        if not mcp_with_query.empty:
+            top_q_mcp = mcp_with_query.query_text.value_counts().reset_index()
+            top_q_mcp.columns = ["requête", "n"]
+            st.dataframe(top_q_mcp, use_container_width=True, hide_index=True, height=250)
+        else:
+            st.info("Aucune requête MCP server loggée.")
+
+    if not search_with_query.empty or not mcp_with_query.empty:
+        st.markdown("**Chronologie des recherches (web + MCP server)**")
+        all_with_query = pd.concat([
+            search_with_query.assign(source="site web") if not search_with_query.empty else pd.DataFrame(),
+            mcp_with_query.assign(source="MCP server") if not mcp_with_query.empty else pd.DataFrame(),
+        ], ignore_index=True)
+        merged_s = all_with_query.sort_values("created_at", ascending=False).merge(
             users[["id", "email"]], left_on="user_id", right_on="id", how="left"
         )
         st.dataframe(
-            merged_s[["created_at", "email", "query_text"]],
+            merged_s[["created_at", "source", "email", "query_text"]],
             use_container_width=True, hide_index=True, height=300,
-        )
-    else:
-        st.info(
-            "Aucune recherche avec `query_text` stocké pour les users non exclus. "
-            "Les nouvelles recherches (après redéploiement du code Next.js) apparaîtront ici."
         )
 
     st.markdown("**Volume par jour**")
-    daily_search = _daily_counts(search_calls, "created_at", "recherches")
+    daily_search = _daily_counts(search_calls, "created_at", "site web")
+    daily_mcp = _daily_counts(mcp_server_calls, "created_at", "MCP server")
     daily_deep = _daily_counts(deep, "created_at", "deep_analyses")
-    if not daily_search.empty or not daily_deep.empty:
+    if not daily_search.empty or not daily_mcp.empty or not daily_deep.empty:
         merged_d = pd.merge(
-            daily_search if not daily_search.empty else pd.DataFrame(columns=["day", "recherches"]),
+            daily_search if not daily_search.empty else pd.DataFrame(columns=["day", "site web"]),
+            daily_mcp if not daily_mcp.empty else pd.DataFrame(columns=["day", "MCP server"]),
+            on="day", how="outer",
+        )
+        merged_d = pd.merge(
+            merged_d,
             daily_deep if not daily_deep.empty else pd.DataFrame(columns=["day", "deep_analyses"]),
             on="day", how="outer",
         ).fillna(0).sort_values("day")
         days_list = merged_d["day"].astype(str).tolist()
-        rech = [int(v) for v in merged_d.get("recherches", pd.Series([])).tolist()]
+        web_v = [int(v) for v in merged_d.get("site web", pd.Series([])).tolist()]
+        mcp_v = [int(v) for v in merged_d.get("MCP server", pd.Series([])).tolist()]
         deep_v = [int(v) for v in merged_d.get("deep_analyses", pd.Series([])).tolist()]
         fig = go.Figure()
-        if rech:
-            fig.add_trace(go.Bar(x=days_list, y=rech, name="recherches", text=[str(v) for v in rech], textposition="outside"))
+        if web_v:
+            fig.add_trace(go.Bar(x=days_list, y=web_v, name="site web", text=[str(v) for v in web_v], textposition="outside"))
+        if mcp_v:
+            fig.add_trace(go.Bar(x=days_list, y=mcp_v, name="MCP server", text=[str(v) for v in mcp_v], textposition="outside"))
         if deep_v:
             fig.add_trace(go.Bar(x=days_list, y=deep_v, name="deep analyses", text=[str(v) for v in deep_v], textposition="outside"))
         fig.update_layout(

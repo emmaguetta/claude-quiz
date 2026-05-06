@@ -9,9 +9,14 @@ export async function proxy(request: NextRequest) {
   // Skip public paths, API routes, and SEO/meta files.
   // Note: /mcp-setup is NOT public — login required to generate an API key.
   // The page redirects unauth users to /login?redirectTo=/mcp-setup.
+  // /.well-known/* MUST be publicly accessible per OAuth 2.0 metadata spec (RFC 8414, RFC 9728).
+  // /oauth/authorize handles its own auth-check internally and preserves the OAuth query
+  // parameters when redirecting to /login (the middleware would drop them).
   if (
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith('/api/') ||
+    pathname.startsWith('/.well-known/') ||
+    pathname.startsWith('/oauth/') ||
     pathname === '/sitemap.xml' ||
     pathname === '/robots.txt' ||
     pathname === '/manifest.webmanifest' ||

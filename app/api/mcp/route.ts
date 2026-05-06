@@ -10,9 +10,9 @@ import {
 import {
   authenticateMcpHttp,
   type AuthResult,
-  FREE_USES_LIMIT,
 } from '@/lib/mcp-http-auth'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { getIssuer } from '@/lib/oauth'
 
 export const runtime = 'nodejs'
 
@@ -28,11 +28,9 @@ const TOOLS = [
       'Search the claude-quiz database of 4,700+ MCP servers using natural language. ' +
       'IMPORTANT: pass the user\'s query VERBATIM in their own words. Do not rephrase, summarize, or split into multiple searches. ' +
       'The semantic search handles natural language well, including vague or multi-intent queries. ' +
-      'Returns 30 raw vector-search results, ranked by hybrid similarity (cosine + keyword). ' +
-      'If the user thinks the ranking is off, follow up with `analyze_mcps` (uses 1 monthly AI credit, requires API key) to AI-rerank and filter false positives. ' +
-      'The first 3 calls are free per session; beyond that, the user must add an API key from ' +
-      SETUP_URL +
-      '.',
+      'Returns up to 10 raw vector-search results, ranked by hybrid similarity (cosine + keyword). ' +
+      'If the user thinks the ranking is off, follow up with `analyze_mcps` (uses 1 monthly AI credit) to AI-rerank and filter false positives. ' +
+      'The service is 100% free. Sign-in is required (OAuth flow opens automatically in your browser on first call). No payment, no credit card.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -42,7 +40,7 @@ const TOOLS = [
           description:
             'The user\'s exact natural-language query, passed verbatim. Do not rephrase.',
         },
-        limit: { type: 'number', minimum: 1, maximum: 50, description: 'Max results (default 30)' },
+        limit: { type: 'number', minimum: 1, maximum: 50, description: 'Max results (default 10)' },
         categories: { type: 'array', items: { type: 'string' }, description: 'Optional: filter by categories' },
         toolTags: {
           type: 'array',
@@ -76,7 +74,7 @@ const TOOLS = [
     description:
       'AI-rerank a previous `search_mcps` result. For each MCP, GPT-4.1-nano evaluates whether it can DIRECTLY accomplish the query (strict platform matching: a Slack MCP is not relevant to a Discord query). Returns a re-ordered list with relevant MCPs first, plus a 1-2 sentence explanation per item. ' +
       'Use this when the user complains the raw ranking has false positives or is too noisy. ' +
-      'Requires an API key (free tier cannot use this). Consumes 1 of ' +
+      'Free, but consumes 1 of ' +
       ANALYSIS_MONTHLY_LIMIT +
       ' monthly credits per call.',
     inputSchema: {
@@ -101,7 +99,7 @@ const TOOLS = [
   {
     name: 'start_login',
     description:
-      'Returns the URL where the user can sign up / log in and generate an API key to lift the free-tier limit and unlock analyze_mcps.',
+      'Returns sign-in instructions. Normally NOT needed: any other tool call automatically triggers OAuth in supporting clients. Use only if your client did not open a browser tab automatically (older clients). The service is 100% free, no payment.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
 ] as const
@@ -167,7 +165,7 @@ export async function OPTIONS() {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, Mcp-Session-Id',
-      'Access-Control-Expose-Headers': 'Mcp-Session-Id',
+      'Access-Control-Expose-Headers': 'Mcp-Session-Id, WWW-Authenticate',
       'Access-Control-Max-Age': '86400',
     },
   })
@@ -182,7 +180,16 @@ async function handleToolCall(request: Request, id: unknown, params: unknown) {
     return jsonRpcResult(id, toolError('Missing tool name'))
   }
 
-  const auth = await authenticateMcpHttp(request, /* consumeFreeUse */ true)
+  const auth = await authenticateMcpHttp(request)
+
+  // Per RFC 9728 / MCP authorization spec, protected resources MUST respond with
+  // 401 + WWW-Authenticate so the client can fetch protected-resource metadata and
+  // automatically initiate the OAuth flow. start_login is exempt because it's the
+  // documented escape hatch for clients that don't support OAuth — it must always
+  // return its text instructions even to unauthenticated callers.
+  if (name !== 'start_login' && auth.kind !== 'authenticated') {
+    return jsonRpcAuthChallenge(id)
+  }
 
   try {
     let text: string
@@ -208,28 +215,16 @@ async function handleToolCall(request: Request, id: unknown, params: unknown) {
   }
 }
 
-function authGuard(auth: AuthResult, toolName: string): string | null {
-  if (auth.kind === 'authenticated' || auth.kind === 'free') return null
-  if (auth.kind === 'free_exhausted') {
-    return `Free tier exhausted (${FREE_USES_LIMIT} calls used). Get an API key at ${SETUP_URL} and add it to your MCP client config under "Authorization: Bearer <your-key>".`
-  }
-  if (auth.kind === 'invalid_session') {
-    return `Invalid session. Reconnect via ${SETUP_URL}.`
-  }
-  return `This MCP requires either an API key or a session. Get an API key at ${SETUP_URL}, or use a client (Claude Code, Cursor) that sends Mcp-Session-Id automatically. Tool: ${toolName}`
-}
-
 async function runSearch(
   args: Record<string, unknown>,
   auth: AuthResult
 ): Promise<string> {
-  const guard = authGuard(auth, 'search_mcps')
-  if (guard) return guard
+  if (auth.kind !== 'authenticated') return 'Error: not authenticated'
 
   const query = typeof args.query === 'string' ? args.query : ''
   if (query.length < 2) return 'Error: query must be at least 2 characters.'
 
-  const limit = typeof args.limit === 'number' ? args.limit : 30
+  const limit = typeof args.limit === 'number' ? args.limit : 10
   const categories = Array.isArray(args.categories)
     ? (args.categories.filter(c => typeof c === 'string') as string[])
     : undefined
@@ -237,26 +232,23 @@ async function runSearch(
     ? (args.toolTags.filter(t => typeof t === 'string') as string[])
     : undefined
 
-  const userId = auth.kind === 'authenticated' ? auth.userId : null
   const data = await searchMcpsCore({
     query,
     limit,
     categories,
     toolTags,
-    userId,
+    userId: auth.userId,
     endpoint: '/api/mcp',
   })
 
-  return formatSearchResults({ query, results: data.results, auth })
+  return formatSearchResults({ query, results: data.results })
 }
 
 async function runAnalyze(
   args: Record<string, unknown>,
   auth: AuthResult
 ): Promise<string> {
-  if (auth.kind !== 'authenticated') {
-    return `analyze_mcps requires an API key (free tier doesn\'t include AI analysis). Generate one at ${SETUP_URL}.`
-  }
+  if (auth.kind !== 'authenticated') return 'Error: not authenticated'
 
   const query = typeof args.query === 'string' ? args.query : ''
   if (query.length < 2) return 'Error: query must be at least 2 characters.'
@@ -337,28 +329,29 @@ async function runAnalyze(
 function formatSearchResults(params: {
   query: string
   results: SearchResult[]
-  auth: AuthResult
 }): string {
-  const { query, results, auth } = params
+  const { query, results } = params
   const lines: string[] = []
+
+  // Display instructions for the assistant (LLM client). Not shown to the user verbatim,
+  // but tells the assistant how to render this payload. Without this, clients tend to
+  // collapse the list to a "top 3" summary which defeats the purpose of returning the full list.
+  if (results.length > 0) {
+    lines.push(
+      `<<DISPLAY_INSTRUCTIONS>> Render the full list of ${results.length} results below to the user as-is. ` +
+        `Do not summarize, do not filter, do not collapse to a "top 3" or "also notable". ` +
+        `Preserve the rank order, every entry, and the markdown structure (### headings, meta line, description, slug line). ` +
+        `The user explicitly opted into the full hybrid ranking; trimming it loses signal. ` +
+        `After the list, you may add a one-line suggestion for next steps, but the list itself is non-negotiable.`
+    )
+    lines.push('')
+  }
 
   // Header
   lines.push(`# ${results.length} MCP${results.length === 1 ? '' : 's'} found for "${query}"`)
   lines.push('')
-
-  if (auth.kind === 'free') {
-    lines.push(`> **Free tier:** ${auth.usesAfter}/${FREE_USES_LIMIT} calls used. ${
-      auth.remainingFree === 0
-        ? `Next call requires an API key from ${SETUP_URL}.`
-        : `${auth.remainingFree} free call${auth.remainingFree === 1 ? '' : 's'} remaining.`
-    }`)
-    lines.push('')
-  }
-
-  if (auth.kind === 'authenticated') {
-    lines.push('> Tip: if the ranking has too many false positives, call `analyze_mcps` with the same query to AI-rerank (uses 1 monthly credit).')
-    lines.push('')
-  }
+  lines.push('> Tip: if the ranking has too many false positives, call `analyze_mcps` with the same query to AI-rerank (uses 1 monthly credit).')
+  lines.push('')
 
   if (results.length === 0) {
     lines.push('No matches. Try a more specific query, or different keywords.')
@@ -414,8 +407,7 @@ async function runDetails(
   args: Record<string, unknown>,
   auth: AuthResult
 ): Promise<string> {
-  const guard = authGuard(auth, 'get_mcp_details')
-  if (guard) return guard
+  if (auth.kind !== 'authenticated') return 'Error: not authenticated'
 
   const slug = typeof args.slug === 'string' ? args.slug : ''
   if (!slug) return 'Error: slug is required.'
@@ -427,17 +419,39 @@ async function runDetails(
 
 function runStartLogin(auth: AuthResult): string {
   if (auth.kind === 'authenticated') {
-    return `You are already authenticated. No further action needed.`
+    return `You are already signed in. No further action needed.`
   }
-  return `To lift the free-tier limit and unlock unlimited searches:
+  return `**The service is 100% free.** Sign-in is required so we can rate-limit per-account and prevent abuse. No payment, no credit card.
+
+There are three ways to sign in. **Try Option 1 first — it's automatic.**
+
+---
+
+**Option 1 (recommended) — Automatic OAuth:**
+
+Just **retry your previous tool call** (e.g. \`search_mcps\` with the user's query). Recent MCP clients (Cursor, mcp-inspector, latest Claude Code) detect the auth challenge and **open a browser tab automatically** to walk through sign-in (GitHub, Google, or email). Once logged in, the client stores the token transparently and the retry succeeds. **No manual config edit needed.**
+
+---
+
+**Option 2 (fallback if no browser tab opens) — Claude Code: \`/mcp\` panel:**
+
+In Claude Code, type \`/mcp\` to open the MCP panel, find \`mcp-search\` in the list, and click **Authenticate**. A browser tab will open for sign-in. Once done, retry the tool call.
+
+---
+
+**Option 3 (manual API key, last resort for older clients without OAuth support):**
 
 1. Open ${SETUP_URL} in your browser.
 2. Sign up or log in (GitHub, Google, or email).
 3. Click "Generate API key", then copy the key shown ONCE.
-4. Add it to your MCP client config under "headers": { "Authorization": "Bearer <your-key>" }.
+4. Add it to your client config:
+   \`claude mcp add mcp-search --transport http https://claudequiz.app/api/mcp --header "Authorization: Bearer <your-key>"\`
+   (or edit \`.claude.json\` directly)
 5. Restart your MCP client.
 
-The key is shown once and never displayed again. If you lose it, generate a new one.`
+---
+
+**Tell the user:** explain there are three paths, suggest Option 1 first (just retry, browser may open). If retrying does not open a tab and they're in Claude Code, mention Option 2 (\`/mcp → Authenticate\`). Only mention Option 3 if neither works. Do NOT silently dump Option 3's manual steps as the primary recommendation.`
 }
 
 // ─── JSON-RPC helpers ───────────────────────────────────────────────────
@@ -467,6 +481,32 @@ function jsonRpcError(id: unknown, code: number, message: string): NextResponse 
     {
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*' },
+    }
+  )
+}
+
+function jsonRpcAuthChallenge(id: unknown): NextResponse {
+  const resourceMetadata = `${getIssuer()}/.well-known/oauth-protected-resource`
+  return NextResponse.json(
+    {
+      jsonrpc: '2.0',
+      id,
+      error: {
+        code: -32001,
+        message: 'authentication_required',
+        data: {
+          authorization_uri: resourceMetadata,
+          hint: `Sign-in required (free, no payment). Three ways: (1) retry — recent clients open a browser tab automatically; (2) in Claude Code, type \`/mcp\` then click Authenticate on \`mcp-search\`; (3) manual API key at ${getIssuer()}/mcp-setup. Call the \`start_login\` tool for the full instructions.`,
+        },
+      },
+    },
+    {
+      status: 401,
+      headers: {
+        'WWW-Authenticate': `Bearer realm="mcp", resource_metadata="${resourceMetadata}"`,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Expose-Headers': 'WWW-Authenticate, Mcp-Session-Id',
+      },
     }
   )
 }
