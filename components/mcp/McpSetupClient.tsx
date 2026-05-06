@@ -27,9 +27,9 @@ const T = {
   fr: {
     back: '← Recherche MCP',
     home: 'Accueil',
-    title: 'Passer en illimité',
+    title: 'Clé API (fallback OAuth)',
     subtitle:
-      'Tu as utilisé tes 3 recherches gratuites, ou tu sais que tu vas l’utiliser souvent ? Génère une clé API et ajoute-la à ta config Claude pour passer en illimité.',
+      "Le mode normal, c'est OAuth : ton client ouvre un onglet de connexion au premier appel d'outil. Si ton client ne supporte pas OAuth (CI, scripts headless, vieux client), génère une clé API ici et ajoute-la en Bearer dans ta config. Service identique, gratuit, illimité.",
     accountLabel: 'Connecté en tant que',
     generateTitle: 'Générer une clé API',
     generateDesc:
@@ -59,9 +59,9 @@ const T = {
   en: {
     back: '← MCP Search',
     home: 'Home',
-    title: 'Go unlimited',
+    title: 'API key (OAuth fallback)',
     subtitle:
-      "Used up your 3 free searches, or know you'll be using this often? Generate an API key and add it to your Claude config to go unlimited.",
+      "The normal mode is OAuth: your client opens a sign-in tab on the first tool call. If your client doesn't support OAuth (CI, headless scripts, older client), generate an API key here and add it as Bearer in your config. Same service, free, unlimited.",
     accountLabel: 'Signed in as',
     generateTitle: 'Generate an API key',
     generateDesc:

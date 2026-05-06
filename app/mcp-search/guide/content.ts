@@ -28,6 +28,7 @@ export type GuideContent = {
   whatPara2: string
   toolSearchDesc: string
   toolDetailsDesc: string
+  toolAnalyzeDesc: string
   toolLoginDesc: string
 
   // Step 1: Add the MCP to Claude (URL only, no key needed)
@@ -88,9 +89,11 @@ export type GuideContent = {
   toolsNoParams: string
   toolSearchSummary: string
   toolDetailsSummary: string
+  toolAnalyzeSummary: string
   toolLoginSummary: string
   toolSearchParams: Array<{ key: string; type: string; desc: string }>
   toolDetailsParams: Array<{ key: string; type: string; desc: string }>
+  toolAnalyzeParams: Array<{ key: string; type: string; desc: string }>
 
   // Section: Examples
   examplesTitle: string
@@ -171,7 +174,7 @@ const FR: GuideContent = {
   navIndexTitle: 'Sur cette page',
   navWhat: "C'est quoi ?",
   navAdd: 'Étape 1 : Ajouter le MCP',
-  navUnlock: 'Étape 2 : Passer en illimité',
+  navUnlock: 'Étape 2 : Clé API (fallback OAuth)',
   navFirstPrompt: 'Étape 3 : Premier prompt',
   navTools: 'Référence des tools',
   navExamples: 'Exemples',
@@ -180,7 +183,7 @@ const FR: GuideContent = {
   badge: 'Nouveau · MCP server',
   heroTitle: 'Utilise notre moteur MCP directement dans Claude',
   heroSubtitle:
-    "Ajoute notre URL à la config de Claude Code, Claude Desktop ou Cursor pour utiliser le moteur depuis ton chat. Les 3 premières recherches sont gratuites, ensuite tu génères une clé API pour passer en illimité.",
+    "Ajoute notre URL à la config de Claude Code, Claude Desktop ou Cursor. Au premier appel d'outil, ton client ouvre automatiquement un onglet de connexion (OAuth). 100% gratuit, illimité, sans carte bancaire.",
 
   whatTitle: "C'est quoi ?",
   whatPara1Before: 'Notre ',
@@ -189,17 +192,18 @@ const FR: GuideContent = {
     ' est un endpoint HTTP hébergé qui expose le moteur de recherche claude-quiz comme un outil dans Claude. Il indexe plus de ',
   whatPara1Stat: '4 700 serveurs MCP',
   whatPara1After: ' et 32 000 outils, avec recherche sémantique (embeddings + ranking hybride).',
-  whatPara2: 'Il expose trois outils que Claude peut appeler automatiquement quand tu en as besoin :',
+  whatPara2: 'Il expose quatre outils que Claude peut appeler automatiquement quand tu en as besoin :',
   toolSearchDesc: 'recherche par prompt naturel',
   toolDetailsDesc: "détails complets d'un MCP par slug",
-  toolLoginDesc: "lien vers la page de génération de clé API",
+  toolAnalyzeDesc: "rerank IA des résultats d'une recherche (anti faux positifs)",
+  toolLoginDesc: "instructions de connexion (rarement utile, OAuth s'ouvre tout seul)",
 
   // Step 1
   addTitle: 'Ajoute le MCP à ton client',
-  addIntroBefore: 'Colle ce snippet dans ton client. Tu obtiens ',
-  addIntroFreeStrong: '3 recherches gratuites par session',
+  addIntroBefore: "Colle ce snippet dans ton client. Au premier appel d'outil, un onglet de connexion s'ouvre dans ton navigateur (",
+  addIntroFreeStrong: 'OAuth, 100% gratuit',
   addIntroAfter:
-    " sans clé d'API : Claude Code envoie automatiquement un identifiant de session.",
+    "). Tu te connectes une fois, le client garde le token, c'est bon.",
   addClaudeCode: 'Claude Code',
   addClaudeCodePathBefore: 'Édite ',
   addClaudeCodePath: '~/.claude.json',
@@ -224,15 +228,15 @@ const FR: GuideContent = {
   addCursorNoteAfter: ') pour que la config soit prise en compte.',
   addCli: 'En une commande (Claude Code)',
   addCliDesc: 'Lance ça dans ton terminal :',
-  addSkipToUnlockBefore: 'Tu as déjà un compte et tu veux générer une clé pour passer en illimité tout de suite ? ',
-  addSkipToUnlockCta: 'Va directement à l’étape 2 →',
+  addSkipToUnlockBefore: "Ton client ne supporte pas OAuth (CI, scripts headless, vieux client) ? ",
+  addSkipToUnlockCta: 'Génère une clé API à la place →',
   addSkipToUnlockAfter: '',
   addManualTitle: 'Ou édite la config à la main',
 
   // Step 2
-  unlockTitle: 'Passe en illimité (optionnel)',
+  unlockTitle: 'Clé API (fallback OAuth, optionnel)',
   unlockDesc:
-    "Au-delà des 3 recherches gratuites, le serveur te renvoie un message demandant une clé API. Tu peux en générer une à tout moment :",
+    "Si ton client n'ouvre pas d'onglet de connexion automatique (vieux client, CI, script headless), tu peux contourner OAuth en générant une clé API et en l'ajoutant en Bearer. Service identique, toujours gratuit, toujours illimité.",
   unlockCtaText: 'Générer ma clé API →',
   unlockHowToBefore:
     "Une fois la clé copiée, modifie ta config : ajoute un champ ",
@@ -268,7 +272,10 @@ Tu veux que je te montre comment l'installer ?`,
   toolSearchSummary: 'Recherche sémantique parmi les 4 700+ MCPs.',
   toolDetailsSummary:
     "Détails complets d'un MCP par slug : tous les tools avec leurs schemas, repo, install, etc.",
-  toolLoginSummary: 'Renvoie le lien vers la page de génération de clé API.',
+  toolAnalyzeSummary:
+    "Rerank IA des résultats d'une recherche pour filtrer les faux positifs (ex: un MCP Slack écarté sur une query Discord). Coûte 1 crédit IA mensuel par appel.",
+  toolLoginSummary:
+    "Renvoie les instructions de connexion en texte. Rarement utile : OAuth s'ouvre automatiquement au premier appel d'outil. À utiliser seulement si ton client n'a pas lancé l'onglet de connexion.",
   toolSearchParams: [
     { key: 'query', type: 'string (requis)', desc: 'Description en langage naturel' },
     { key: 'limit', type: 'number (optionnel)', desc: 'Max résultats (1-25, défaut 10)' },
@@ -280,6 +287,10 @@ Tu veux que je te montre comment l'installer ?`,
     },
   ],
   toolDetailsParams: [{ key: 'slug', type: 'string (requis)', desc: 'Slug retourné par search_mcps' }],
+  toolAnalyzeParams: [
+    { key: 'query', type: 'string (requis)', desc: "La même query que celle passée à search_mcps" },
+    { key: 'limit', type: 'number (optionnel)', desc: 'Nombre de résultats à analyser (1-30, défaut 15)' },
+  ],
 
   examplesTitle: 'Exemples de prompts',
   examplesPrompts: [
@@ -294,11 +305,11 @@ Tu veux que je te montre comment l'installer ?`,
   troubleQ1: "`mcp-search` n'apparaît pas dans Claude après la config",
   troubleA1:
     "Quitte et relance complètement le client (pas juste fermer la fenêtre). Vérifie que `type` est bien `\"http\"` et que l'URL est correcte. Dans Claude Code, tape `/mcp` pour voir le statut.",
-  troubleQ2: '« Free tier exhausted » alors que je viens d\'ajouter ma clé',
-  troubleA2Before: 'Vérifie que ',
-  troubleA2Code: 'Authorization: Bearer mcps_…',
+  troubleQ2: "Le client ne déclenche pas l'onglet de connexion / erreur « Sign-in required »",
+  troubleA2Before: "Ton client est probablement trop ancien pour OAuth. Dans Claude Code, tape ",
+  troubleA2Code: '/mcp',
   troubleA2After:
-    " est bien dans les `headers` de ta config (pas dans `args` ou ailleurs), sans espaces autour de la clé. Re-déclare le serveur si tu n'es pas sûr.",
+    " puis clique sur Authenticate à côté de `mcp-search`. Si ça ne marche toujours pas, génère une clé API à l'étape 2 et utilise-la en Bearer (la clé bypasse OAuth).",
   troubleQ3: "J'ai perdu ma clé / je veux la révoquer",
   troubleA3Before: "Va sur ",
   troubleA3CtaText: 'la page de setup',
@@ -310,11 +321,11 @@ Tu veux que je te montre comment l'installer ?`,
 
   securityTitle: 'Sécurité & vie privée',
   securityItem1:
-    "La clé est stockée hashée (SHA-256) côté serveur. Le serveur ne peut pas retrouver la valeur en clair, donc on ne peut pas te la rappeler.",
+    "OAuth : le token est géré et stocké par ton client (Claude Code, Desktop, Cursor). Nous ne le voyons jamais en clair côté serveur.",
   securityItem2:
-    "Tu peux avoir jusqu'à 5 clés actives. Révoque celles que tu n'utilises plus depuis la page de setup.",
+    "Clé API : elle est stockée hashée (SHA-256) côté serveur. On ne peut pas te la rappeler. Tu peux avoir jusqu'à 5 clés actives, révocables depuis la page de setup.",
   securityItem3:
-    "Aucun mot de passe ne transite par Claude. Toute l'authentification se fait sur le site claude-quiz dans ton navigateur.",
+    "Aucun mot de passe ne transite par Claude. Toute l'authentification se fait sur claudequiz.app dans ton navigateur.",
   securityItem4:
     "Tes recherches sont loguées comme les recherches normales du site (pour analyser les coûts IA), mais nous ne stockons pas le contenu des résultats.",
 
@@ -334,7 +345,7 @@ const EN: GuideContent = {
   navIndexTitle: 'On this page',
   navWhat: 'What is this?',
   navAdd: 'Step 1: Add the MCP',
-  navUnlock: 'Step 2: Go unlimited',
+  navUnlock: 'Step 2: API key (OAuth fallback)',
   navFirstPrompt: 'Step 3: First prompt',
   navTools: 'Tools reference',
   navExamples: 'Examples',
@@ -343,7 +354,7 @@ const EN: GuideContent = {
   badge: 'New · MCP server',
   heroTitle: 'Use our MCP search engine directly inside Claude',
   heroSubtitle:
-    "Add our URL to your Claude Code, Claude Desktop, or Cursor config to use the engine from your chat. The first 3 searches are free, then generate an API key for unlimited use.",
+    "Add our URL to your Claude Code, Claude Desktop, or Cursor config. On the first tool call, your client opens a sign-in tab automatically (OAuth). 100% free, unlimited, no credit card.",
 
   whatTitle: 'What is this?',
   whatPara1Before: 'Our ',
@@ -352,17 +363,18 @@ const EN: GuideContent = {
     ' is a hosted HTTP endpoint that exposes the claude-quiz search engine as a tool inside Claude. It indexes more than ',
   whatPara1Stat: '4,700 MCP servers',
   whatPara1After: ' and 32,000 tools, with semantic search (embeddings + hybrid ranking).',
-  whatPara2: 'It exposes three tools that Claude can call automatically when you need them:',
+  whatPara2: 'It exposes four tools that Claude can call automatically when you need them:',
   toolSearchDesc: 'natural-language search',
   toolDetailsDesc: 'full details for an MCP by slug',
-  toolLoginDesc: 'link to the API key generation page',
+  toolAnalyzeDesc: 'AI rerank of search results to filter false positives',
+  toolLoginDesc: "sign-in instructions (rarely needed, OAuth opens on its own)",
 
   // Step 1
   addTitle: 'Add the MCP to your client',
-  addIntroBefore: 'Paste this snippet into your client. You get ',
-  addIntroFreeStrong: '3 free searches per session',
+  addIntroBefore: "Paste this snippet into your client. On the first tool call, a sign-in tab opens in your browser (",
+  addIntroFreeStrong: 'OAuth, 100% free',
   addIntroAfter:
-    ' without an API key. Claude Code sends a session id automatically.',
+    "). Sign in once, your client keeps the token, and that's it.",
   addClaudeCode: 'Claude Code',
   addClaudeCodePathBefore: 'Edit ',
   addClaudeCodePath: '~/.claude.json',
@@ -387,15 +399,15 @@ const EN: GuideContent = {
   addCursorNoteAfter: ') so the config is picked up.',
   addCli: 'One-liner (Claude Code)',
   addCliDesc: 'Run this in your terminal:',
-  addSkipToUnlockBefore: 'Already have an account and want to generate a key for unlimited use right away? ',
-  addSkipToUnlockCta: 'Skip to step 2 →',
+  addSkipToUnlockBefore: "Your client doesn't support OAuth (CI, headless scripts, older client)? ",
+  addSkipToUnlockCta: 'Generate an API key instead →',
   addSkipToUnlockAfter: '',
   addManualTitle: 'Or edit your config manually',
 
   // Step 2
-  unlockTitle: 'Go unlimited (optional)',
+  unlockTitle: 'API key (OAuth fallback, optional)',
   unlockDesc:
-    'Past the 3 free searches, the server asks for an API key. You can generate one anytime:',
+    "If your client doesn't open a sign-in tab automatically (older client, CI, headless script), you can bypass OAuth by generating an API key and adding it as Bearer. Same service, still free, still unlimited.",
   unlockCtaText: 'Generate my API key →',
   unlockHowToBefore: 'Once the key is copied, edit your config: add a ',
   unlockHowToStrong: '"headers"',
@@ -430,7 +442,10 @@ Want me to show you how to install it?`,
   toolSearchSummary: 'Semantic search across 4,700+ MCPs.',
   toolDetailsSummary:
     'Full details for an MCP by slug: every tool with input schema, repo, install, etc.',
-  toolLoginSummary: 'Returns the URL of the API key generation page.',
+  toolAnalyzeSummary:
+    "AI rerank of a previous search result to filter false positives (e.g. a Slack MCP rejected on a Discord query). Costs 1 monthly AI credit per call.",
+  toolLoginSummary:
+    "Returns sign-in instructions as text. Rarely needed: OAuth triggers automatically on the first tool call. Use only if your client didn't open the sign-in tab.",
   toolSearchParams: [
     { key: 'query', type: 'string (required)', desc: 'Natural-language description' },
     { key: 'limit', type: 'number (optional)', desc: 'Max results (1-25, default 10)' },
@@ -442,6 +457,10 @@ Want me to show you how to install it?`,
     },
   ],
   toolDetailsParams: [{ key: 'slug', type: 'string (required)', desc: 'Slug returned by search_mcps' }],
+  toolAnalyzeParams: [
+    { key: 'query', type: 'string (required)', desc: "Same query that was passed to search_mcps" },
+    { key: 'limit', type: 'number (optional)', desc: 'How many top results to analyze (1-30, default 15)' },
+  ],
 
   examplesTitle: 'Prompt examples',
   examplesPrompts: [
@@ -456,27 +475,27 @@ Want me to show you how to install it?`,
   troubleQ1: '`mcp-search` does not show up in Claude after configuring',
   troubleA1:
     'Fully quit and relaunch the client (not just close the window). Make sure `type` is `"http"` and the URL is correct. In Claude Code, type `/mcp` to check the status.',
-  troubleQ2: '"Free tier exhausted" right after I added my key',
-  troubleA2Before: 'Make sure ',
-  troubleA2Code: 'Authorization: Bearer mcps_…',
+  troubleQ2: "Client doesn't open the sign-in tab / 'Sign-in required' error",
+  troubleA2Before: "Your client is probably too old for OAuth. In Claude Code, type ",
+  troubleA2Code: '/mcp',
   troubleA2After:
-    " is in the `headers` of your config (not in `args` or elsewhere) with no surrounding spaces. Re-declare the server if you're unsure.",
+    " then click Authenticate next to `mcp-search`. If that still fails, generate an API key from step 2 and use it as Bearer (the key bypasses OAuth).",
   troubleQ3: 'I lost my key / I want to revoke it',
   troubleA3Before: 'Go to ',
   troubleA3CtaText: 'the setup page',
   troubleA3After:
-    ', click "Revoke" next to the affected key. You can generate a new one — the client picks it up next time you update the config.',
+    ', click "Revoke" next to the affected key. You can generate a new one, the client picks it up next time you update the config.',
   troubleQ4: '"Embedding API error"',
   troubleA4:
     "It's a server-side issue (missing OpenAI key or quota exceeded). Try again in a few minutes.",
 
   securityTitle: 'Security & privacy',
   securityItem1:
-    "The key is stored as a SHA-256 hash on the server. The server can't recover the plaintext, so we can never re-show it to you.",
+    "OAuth: the access token is held and stored by your client (Claude Code, Desktop, Cursor). We never see it in plaintext on the server.",
   securityItem2:
-    "You can have up to 5 active keys. Revoke any you don't use anymore from the setup page.",
+    "API key: stored as a SHA-256 hash on the server. We can't recover the plaintext, so we can never re-show it. You can have up to 5 active keys, revocable from the setup page.",
   securityItem3:
-    'No password ever transits through Claude. All authentication happens on the claude-quiz site in your browser.',
+    'No password ever transits through Claude. All authentication happens on claudequiz.app in your browser.',
   securityItem4:
     "Your searches are logged like normal site searches (for AI cost tracking), but we don't store the contents of the results.",
 

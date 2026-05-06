@@ -85,6 +85,9 @@ export function GuideClient() {
               <code className="text-amber-300">get_mcp_details</code> : {c.toolDetailsDesc}
             </li>
             <li>
+              <code className="text-amber-300">analyze_mcps</code> : {c.toolAnalyzeDesc}
+            </li>
+            <li>
               <code className="text-amber-300">start_login</code> : {c.toolLoginDesc}
             </li>
           </ul>
@@ -199,6 +202,13 @@ export function GuideClient() {
             name="get_mcp_details"
             description={c.toolDetailsSummary}
             params={c.toolDetailsParams}
+            paramsLabel={c.toolsParams}
+            noParamsLabel={c.toolsNoParams}
+          />
+          <ToolDoc
+            name="analyze_mcps"
+            description={c.toolAnalyzeSummary}
+            params={c.toolAnalyzeParams}
             paramsLabel={c.toolsParams}
             noParamsLabel={c.toolsNoParams}
           />
